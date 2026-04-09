@@ -10,10 +10,12 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.SneakyThrows;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,10 +35,14 @@ public class CurrenciesServlet extends HttpServlet {
 //        currenciesRepository = (CurrenciesRepository) getServletContext().getAttribute("currenciesRepository");
 //        currenciesRepository = (CurrenciesRepository) getServletContext().getAttribute("currenciesRepository");
         // hikariDataSource
-        HikariDataSource hikariDataSource = (HikariDataSource) getServletContext().getAttribute("hikariDataSource");
-        currenciesRepository = new CurrenciesRepositoryImpl(hikariDataSource);
+//        HikariDataSource hikariDataSource = (HikariDataSource) getServletContext().getAttribute("hikariDataSource");
+//        currenciesRepository = new CurrenciesRepositoryImpl(hikariDataSource);
+        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
+        currenciesRepository = new CurrenciesRepositoryImpl(connection);
     }
 
+    @SneakyThrows
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
     /* *****************************************
      GET /currencies
@@ -61,12 +67,7 @@ public class CurrenciesServlet extends HttpServlet {
      Ошибка (например, база данных недоступна) - 500
      ********************************************** */
 
-        List<Currency> listCurrencies;
-        try {
-            listCurrencies = currenciesRepository.getCurrencies();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        List<Currency> listCurrencies  = currenciesRepository.getCurrencies();
 
         if (listCurrencies.isEmpty()) {
             //err 500
@@ -231,7 +232,7 @@ public class CurrenciesServlet extends HttpServlet {
             ObjectMapper mapper = new ObjectMapper();
             printWriter.println(mapper.writeValueAsString(currencyDTO));
         } else {
-             //  Ошибка (например, база данных недоступна) - 500
+            //  Ошибка (например, база данных недоступна) - 500
             // 1. Устанавливаем статус 500
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 

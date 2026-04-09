@@ -8,9 +8,8 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public class ExchangeRateDTO {
-
     int id;
-    Currency baseCurrency;
-    Currency targetCurrency;
+    CurrencyDTO baseCurrency;
+    CurrencyDTO targetCurrency;
     double rate;
 }

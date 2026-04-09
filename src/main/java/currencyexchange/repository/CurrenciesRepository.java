@@ -10,6 +10,7 @@ public interface CurrenciesRepository {
 
      List<Currency> getCurrencies() throws SQLException;
      Optional<Currency> findByCode(String code) throws SQLException;
+     Optional<Currency> findById(int id) throws SQLException;
      void save(Currency currency) throws SQLException;
 
     /*

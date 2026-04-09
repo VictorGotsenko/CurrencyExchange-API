@@ -11,7 +11,9 @@ public interface ExchangeRatesRepository {
 
     List<ExchangeRate> getExchangeRates() throws SQLException;
 
-    Optional<ExchangeRate> findByCode(String code) throws SQLException;
+    Optional<ExchangeRate> findByCode(String baseCurrency) throws SQLException;
+
+    Optional<ExchangeRate> findById(int baseCurrencyId, int targetCurrencyId) throws SQLException;
 
     void save(ExchangeRate exchangeRate) throws SQLException;
 }

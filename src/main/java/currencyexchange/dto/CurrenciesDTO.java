@@ -8,10 +8,5 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 public class CurrenciesDTO {
-    /*
-    здесь располагается список валют
-    который затем сереализуется в JSON
-     */
-
     List<CurrencyDTO> listCurrencyDTO;
 }

@@ -11,6 +11,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.SneakyThrows;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -30,10 +31,15 @@ public class CurrencyServlet extends HttpServlet {
     @Override
     public void init() throws ServletException {
         // Retrieve initialization parameters defined in web.xml or annotations
-        HikariDataSource hikariDataSource = (HikariDataSource) getServletContext().getAttribute("hikariDataSource");
-        currenciesRepository = new CurrenciesRepositoryImpl(hikariDataSource);
+//        HikariDataSource hikariDataSource = (HikariDataSource) getServletContext().getAttribute("hikariDataSource");
+//        currenciesRepository = new CurrenciesRepositoryImpl(hikariDataSource);
+        Connection connection = (Connection)  getServletContext().getAttribute("ConnectionToDB");
+        currenciesRepository = new CurrenciesRepositoryImpl(connection);
+
     }
 
+    @SneakyThrows
+    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         /* **************************************
         GET /currency/EUR
@@ -131,13 +137,7 @@ public class CurrencyServlet extends HttpServlet {
         }
 
         //4. Вернуть
-        Optional<Currency> newCurrency;
-        try {
-            newCurrency = currenciesRepository.findByCode(codeCurrency);
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        Optional<Currency> newCurrency= currenciesRepository.findByCode(codeCurrency);
 
         if (newCurrency.isPresent()) {
             Currency result = newCurrency.get();
