@@ -32,7 +32,7 @@ dependencies {
     runtimeOnly("org.slf4j:slf4j-simple:2.0.17")
 
     // DB section
-    implementation("com.zaxxer:HikariCP:6.3.0") // HikariCP
+//    implementation("com.zaxxer:HikariCP:6.3.0") // HikariCP
     implementation("org.xerial:sqlite-jdbc:3.51.3.0")  //SQLite JDBC driver
 //    implementation("org.xerial:sqlite-jdbc:3.51.3.0") // Используйте актуальную версию
 

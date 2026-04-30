@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -14,14 +15,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ExchangeRate extends BaseModel {
     int id;
-    int baseCurrencyCode;
-    int targetCurrencyCode;
-    double rate;
+    int baseCurrencyId;
+    int targetCurrencyId;
+    BigDecimal rate;
     private LocalDateTime createdAt;
 
-    public ExchangeRate(int baseCurrencyCode, int targetCurrencyCode, double rate) {
-        this.baseCurrencyCode = baseCurrencyCode;
-        this.targetCurrencyCode = targetCurrencyCode;
-        this.rate = rate;
+    public ExchangeRate(int baseCurrencyId, int targetCurrencyId, String rate) {
+        this.baseCurrencyId = baseCurrencyId;
+        this.targetCurrencyId = targetCurrencyId;
+        this.rate = new BigDecimal(rate);
     }
 }

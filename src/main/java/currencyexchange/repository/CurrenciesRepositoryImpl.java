@@ -13,13 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class CurrenciesRepositoryImpl implements CurrenciesRepository {
-    //    private final HikariDataSource hikariDataSource;
-    private Connection connection;
-
-//    public CurrenciesRepositoryImpl(HikariDataSource hikariDataSource) {
-//        this.hikariDataSource = hikariDataSource;
-//    }
-
+    private final Connection connection;
 
     public CurrenciesRepositoryImpl(Connection connection) {
         this.connection = connection;
@@ -30,20 +24,16 @@ public class CurrenciesRepositoryImpl implements CurrenciesRepository {
         List<Currency> result = new ArrayList<>();
         String sql = "SELECT * FROM currencies";
 
-        // 4. Получение данных
-        ResultSet resultSet = null;
-
         Statement statement = connection.createStatement();
-        resultSet = statement.executeQuery(sql);
+        ResultSet resultSet = statement.executeQuery(sql);
 
         while (true) {
             try {
                 if (!resultSet.next()) break;
-                String fullname = resultSet.getString("fullname");
-                String code = resultSet.getString("code");
-                String sign = resultSet.getString("sign");
-
-                Currency currency = new Currency(fullname, code, sign);
+                Currency currency = new Currency(
+                        resultSet.getString("fullname"),
+                        resultSet.getString("code"),
+                        resultSet.getString("sign"));
 
                 currency.setId(resultSet.getInt("id"));
 
@@ -60,12 +50,9 @@ public class CurrenciesRepositoryImpl implements CurrenciesRepository {
 
     @Override
     public void save(Currency currency) {
-//        String sql = "INSERT INTO currencies (code, fullname ,sign) VALUES ('USD', 'US Dollar', '$');";
         String sql = "INSERT INTO currencies (code, fullname ,sign) VALUES (?, ?, ?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-//            Connection connection = hikariDataSource.getConnection();
-//            PreparedStatement preparedStatement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, currency.getCode());
             preparedStatement.setString(2, currency.getName());
             preparedStatement.setString(3, currency.getSign());
@@ -84,75 +71,50 @@ public class CurrenciesRepositoryImpl implements CurrenciesRepository {
 
     @Override
     public Optional<Currency> findByCode(String code) throws SQLException {
-//        String sql = "SELECT id, code, fullname, sign FROM currencies WHERE code = '?';";
         String sql = "SELECT * FROM currencies WHERE code = ?";
-        // Получение данных
 
-        ResultSet resultSet = null;
-        try {
-//            Connection connection = hikariDataSource.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, code);
+        PreparedStatement preparedStatement = connection.prepareStatement(sql);
+        preparedStatement.setString(1, code);
+        ResultSet resultSet = preparedStatement.executeQuery();
 
-            resultSet = preparedStatement.executeQuery();
 
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
         if (resultSet.next()) {
             Currency currency = new Currency(
-                    resultSet.getString("code"),
                     resultSet.getString("fullname"),
+                    resultSet.getString("code"),
                     resultSet.getString("sign"));
 
             currency.setId(resultSet.getInt("id"));
-
             String created_at = resultSet.getString("created_at");
             LocalDateTime date = LocalDateTime.parse(created_at, currency.getFormatter());
             currency.setCreatedAt(date);
 
             return Optional.of(currency);
         }
-
         return Optional.empty();
     }
 
-        @Override
+    @Override
     public Optional<Currency> findById(int id) throws SQLException {
-//        String sql = "SELECT id, code, fullname, sign FROM currencies WHERE id = '?';";
         String sql = "SELECT * FROM currencies WHERE id = ?";
 
-        // Получение данных
-        ResultSet resultSet = null;
-        try {
+        PreparedStatement preparedStatement = connection.prepareStatement(sql);
+        preparedStatement.setInt(1, id);
+        ResultSet resultSet = preparedStatement.executeQuery();
 
-            PreparedStatement preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setInt(1, id);
-
-            resultSet = preparedStatement.executeQuery();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
         if (resultSet.next()) {
             Currency currency = new Currency(
-                    resultSet.getString("code"),
                     resultSet.getString("fullname"),
+                    resultSet.getString("code"),
                     resultSet.getString("sign"));
 
             currency.setId(resultSet.getInt("id"));
-
             String created_at = resultSet.getString("created_at");
             LocalDateTime date = LocalDateTime.parse(created_at, currency.getFormatter());
             currency.setCreatedAt(date);
 
             return Optional.of(currency);
         }
-
         return Optional.empty();
     }
-
-
-
-
 }

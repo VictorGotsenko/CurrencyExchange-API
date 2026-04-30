@@ -8,38 +8,56 @@ import currencyexchange.repository.CurrenciesRepository;
 import currencyexchange.repository.CurrenciesRepositoryImpl;
 import currencyexchange.repository.ExchangeRatesRepository;
 import currencyexchange.repository.ExchangeRatesRepositoryImpl;
+import currencyexchange.util.ConverterDTOs;
+import currencyexchange.util.ExchangeRateUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.SneakyThrows;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @WebServlet(name = "ExchangeRateServlet", urlPatterns = "/exchangeRate/*")
 public class ExchangeRateServlet extends HttpServlet {
 
     ExchangeRatesRepository exchangeRatesRepository;
     CurrenciesRepository currenciesRepository;
+    ConverterDTOs converterDTOs;
+    ExchangeRateUtils exchangeRateUtils;
+    ObjectMapper mapper;
 
     @Override
     public void init() throws ServletException {
         Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
         exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
         currenciesRepository = new CurrenciesRepositoryImpl(connection);
+        converterDTOs = new ConverterDTOs(connection);
+        exchangeRateUtils = new ExchangeRateUtils();
+
+        // Create and enable features
+        mapper = JsonMapper.builder()
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .build();
 
     }
-
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         /* **************************************
+        Получение конкретного обменного курса
         GET /exchangeRate/USDRUB
         "id": 0,
            "baseCurrency": {
@@ -56,185 +74,262 @@ public class ExchangeRateServlet extends HttpServlet {
            },
         "rate": 80
         }
-
+       ------------------------------------------
         HTTP коды ответов:
 
         Успех - 200
         Коды валют пары отсутствуют в адресе - 400
         Обменный курс для пары не найден - 404
         Ошибка (например, база данных недоступна) - 500
-        ****************************************/
-
-
-        // 1. Получить всю строку запроса (например, "id=10&name=test")
-        String requestURIString = request.getRequestURI();
-
-        // Получить URI без параметров (например, /mycontext/myservlet)
-        String uri = request.getRequestURI();
-        String uriInfo = request.getPathInfo();
-
-        // Получить полную строку запроса (например, /mycontext/myservlet?id=1)
-        String url = request.getRequestURL().toString();
-        String queryString = request.getQueryString(); // id=1
-
-//        String codeCurrencyInfo = "";
-        String codeCurrencyInfo = request.getPathInfo();
-//        codeCurrencyInfo = request.getPathInfo();
-
-        String pathInfo = request.getPathInfo();
-
-        //------------------
-        // 3.a Is there the code?
+        *****************************************/
         if (request.getPathInfo() == null
                 || request.getPathInfo().equals("/")
                 || request.getPathInfo().isEmpty()) {
             //Код валюты отсутствует в адресе - 400
-            // 1. Устанавливаем статус 400
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-
-            // 2. Устанавливаем тип контента JSON
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-
-            // 3. Формируем JSON-ответ
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
                     "Коды валют пары отсутствуют в адресе"
             );
 
-            // 4. Отправляем ответ
-            PrintWriter out = response.getWriter();
-            out.print(jsonError);
-            out.flush();
-            return;
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
         }
-        //--------------------
 
-        // 3. Парсить
         String codeCurrencies = request.getPathInfo().replace("/", "").replace(" ", "").toUpperCase();
         String baseCurrencyCode = codeCurrencies.substring(0, 3);
         String targetCurrencyCode = codeCurrencies.substring(3);
 
-        // Искать
-        // найти id base
-        // найти id target
-        Optional<Currency> baseCurrency = null;
+        Currency baseCurrency;
+        Currency targetCurrency;
+        Optional<Currency> desiredCurrency = null;
+
         try {
-            baseCurrency = currenciesRepository.findByCode(baseCurrencyCode);
+            desiredCurrency = currenciesRepository.findByCode(baseCurrencyCode);
+            if (desiredCurrency.isEmpty()) {
+                request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+                String jsonError = String.format(
+                        "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                        "Произошла ошибка при обработке запроса. Код " + baseCurrencyCode + " не найден"
+                );
+                request.getSession().setAttribute("jsonError", jsonError);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            }
+            baseCurrency = desiredCurrency.get();
+
+            desiredCurrency = currenciesRepository.findByCode(targetCurrencyCode);
+            if (desiredCurrency.isEmpty()) {
+                request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+                String jsonError = String.format(
+                        "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                        "Произошла ошибка при обработке запроса. Код " + targetCurrencyCode + " не найден"
+                );
+                request.getSession().setAttribute("jsonError", jsonError);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            }
+            targetCurrency = desiredCurrency.get();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        Optional<Currency> targetCurrency = null;
+
+        Optional<ExchangeRate> exchangeRate;
         try {
-            targetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
+            exchangeRate = exchangeRatesRepository.findByCurrencyIDs(baseCurrency.getId(), targetCurrency.getId());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
 
-        int baseCurrencyId = -1;
-        int targetCurrencyId = -1;
-        if (baseCurrency.isPresent()) {
-            baseCurrencyId = baseCurrency.get().getId();
-        }
-
-        if (targetCurrency.isPresent()) {
-            targetCurrencyId = targetCurrency.get().getId();
-        }
-
-        // запросить пару: 1)пара есть, вернуть пару 2) пары нет, вернуть 404
-        Optional<ExchangeRate> result = null;
-        try {
-            result = exchangeRatesRepository.findById(baseCurrencyId, targetCurrencyId);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (result.isEmpty()) {
-            //err 404
-            // 1. Устанавливаем статус 404
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-
-            // 2. Устанавливаем тип контента JSON
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-
-            // 3. Формируем JSON-ответ
+        if (exchangeRate.isEmpty()) {
+            request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
             String jsonError = String.format(
                     "{\"error\": \"Not Found\", \"message\": \"%s\"}",
                     "Обменный курс для пары не найден"
             );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
+        }
 
-            // 4. Отправляем ответ
-            PrintWriter out = response.getWriter();
-            out.print(jsonError);
-            out.flush();
-            return;
-        } else {
-            ExchangeRateDTO exchangeRateDTO;
-            ExchangeRate exchangeRate = result.get();
+        ExchangeRateDTO exchangeRateDTO;
+        ExchangeRate exchangeRateResult = exchangeRate.get();
 
+        int id = exchangeRateResult.getId();
+        BigDecimal rate = exchangeRateResult.getRate();
 
-            int id = exchangeRate.getId();
-            baseCurrencyId = exchangeRate.getBaseCurrencyCode();
-            targetCurrencyId = exchangeRate.getTargetCurrencyCode();
-            double rate = exchangeRate.getRate();
+        CurrencyDTO baseCurrencyDTO = new CurrencyDTO(
+                baseCurrency.getId(),
+                baseCurrency.getName(),
+                baseCurrency.getCode(),
+                baseCurrency.getSign());
 
-            try {
-                baseCurrency = currenciesRepository.findById(baseCurrencyId);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+        CurrencyDTO targetCurrencyDTO = new CurrencyDTO(
+                targetCurrency.getId(),
+                targetCurrency.getName(),
+                targetCurrency.getCode(),
+                targetCurrency.getSign());
+
+        exchangeRateDTO = new ExchangeRateDTO(id, baseCurrencyDTO, targetCurrencyDTO, rate);
+        PrintWriter printWriter = response.getWriter();
+
+        response.setStatus(HttpServletResponse.SC_OK);
+        printWriter.println(mapper.writeValueAsString(exchangeRateDTO));
+
+    }
+
+    @Override
+    protected void doPatch(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    /* ******************************************
+     Обновление существующего в базе обменного курса
+     PATCH /exchangeRate/USDRUB
+     --------------------------------------------
+     Данные передаются в теле запроса в виде полей формы (x-www-form-urlencoded).
+     Единственное поле формы - rate
+     Пример ответа - JSON представление вставленной в базу записи, включая её ID:
+     {
+        "id": 0,
+        "baseCurrency": {
+          "id": 0,
+          "name": "United States dollar",
+          "code": "USD",
+          "sign": "$"
+        },
+        "targetCurrency": {
+          "id": 2,
+          "name": "Russian Ruble",
+          "code": "RUB",
+          "sign": "₽"
+        },
+        "rate": 85
+     }
+     --------------------------------------------
+     HTTP коды ответов:
+     Успех - 201
+     Отсутствует нужное поле формы - 400 +
+     Валютная пара отсутствует в базе данных - 404 +
+     Ошибка (например, база данных недоступна) - 500 +
+    ********************************************/
+
+        Currency baseCurrency;
+        Currency targetCurrency;
+
+        if (request.getPathInfo() == null
+                || request.getPathInfo().equals("/")
+                || request.getPathInfo().isEmpty()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Коды валют пары отсутствуют в адресе"
+            );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+        }
+
+        // parse
+        String codeCurrencies = request.getPathInfo().replace("/", "").replace(" ", "").toUpperCase();
+        String baseCurrencyCode = codeCurrencies.substring(0, 3);
+        String targetCurrencyCode = codeCurrencies.substring(3);
+
+        String requestBody = request.getReader().lines()
+                .collect(Collectors.joining(System.lineSeparator()));
+
+        BigDecimal rate = exchangeRateUtils.getRate(requestBody);
+        if (rate.compareTo(new BigDecimal("0")) == -1) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Ошибочное поле формы - rate. Ожидается число"
+            );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+        }
+
+        int baseCurrencyId = 0;
+        int targetCurrencyId = 0;
+        int exchangeRateId = 0;
+
+        try {
+            Optional<Currency> desiredBaseCurrency = currenciesRepository.findByCode(baseCurrencyCode);
+            Optional<Currency> desiredTargetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
+            if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
+                // Какая-то валюта не найдена
+                request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+                String jsonError = null;
+                if (desiredBaseCurrency.isEmpty()) {
+                    jsonError = String.format(
+                            "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                            "Произошла ошибка при обработке запроса. Код " + baseCurrencyCode + " не найден"
+                    );
+                } else {
+                    jsonError = String.format(
+                            "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                            "Произошла ошибка при обработке запроса. Код " + targetCurrencyCode + " не найден"
+                    );
+                }
+                request.getSession().setAttribute("jsonError", jsonError);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
             }
-            try {
-                targetCurrency = currenciesRepository.findById(targetCurrencyId);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+            baseCurrency = desiredBaseCurrency.get();
+            targetCurrency = desiredTargetCurrency.get();
+
+            List<ExchangeRate> exchangeRates = exchangeRatesRepository.getExchangeRates();
+
+            if (baseCurrency != null) {
+                baseCurrencyId = baseCurrency.getId();
             }
-            if (baseCurrency.isPresent() && targetCurrency.isPresent()) {
-                Currency baseCurr = baseCurrency.get();
-                CurrencyDTO baseCurrencyDTO = new CurrencyDTO(
-                        baseCurr.getId(),
-                        baseCurr.getName(),
-                        baseCurr.getCode(),
-                        baseCurr.getSign());
+            if (targetCurrency != null) {
+                targetCurrencyId = targetCurrency.getId();
+            }
 
-                Currency targetCurr = targetCurrency.get();
-                CurrencyDTO targetCurrencyDTO = new CurrencyDTO(
-                        targetCurr.getId(),
-                        targetCurr.getName(),
-                        targetCurr.getCode(),
-                        targetCurr.getSign());
+            ExchangeRate exchangeRate = exchangeRates.stream()
+                    .filter(e -> e.getBaseCurrencyId() == baseCurrency.getId()
+                            && e.getTargetCurrencyId() == targetCurrency.getId())
+                    .findFirst().orElse(null);
 
-                exchangeRateDTO = new ExchangeRateDTO(id, baseCurrencyDTO, targetCurrencyDTO, rate);
-                PrintWriter printWriter = response.getWriter();
-
-                response.setStatus(HttpServletResponse.SC_OK);
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
-                response.setHeader("Content-Security-Policy", "default-src 'self';"); //CSP (Content Security Policy)
-
-                ObjectMapper mapper = new ObjectMapper();
-                printWriter.println(mapper.writeValueAsString(exchangeRateDTO));
+            if (exchangeRate != null) {
+                exchangeRateId = exchangeRate.getId();
             } else {
-                //  Ошибка (например, база данных недоступна) - 500
-                // 1. Устанавливаю статус 500
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-
-                // 2. Устанавливаю тип контента JSON
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
-                response.setHeader("Content-Security-Policy", "default-src 'self';"); //CSP (Content Security Policy)
-
-                // 3. Формирую JSON-ответ
+                request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
                 String jsonError = String.format(
-                        "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
-                        "Произошла ошибка при обработке запроса"
+                        "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
+                        "Валютная пара отсутствует в базе данных"
                 );
-
-                // 4. Отправляю ответ
-                PrintWriter out = response.getWriter();
-                out.print(jsonError);
-                out.flush();
+                request.getSession().setAttribute("jsonError", jsonError);
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
             }
+        } catch (SQLException e) {
+            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+            String jsonError = String.format(
+                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                    "Произошла ошибка при обработке запроса"
+            );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+        }
+
+        try {
+            exchangeRatesRepository.update(exchangeRateId, rate);
+
+            Optional<ExchangeRate> exchangeRate = exchangeRatesRepository.findById(exchangeRateId);
+
+            if (exchangeRate.isPresent()) {
+                ExchangeRateDTO exchangeRateDTO = new ExchangeRateDTO(
+                        exchangeRate.get().getId(),
+                        converterDTOs.Currency2DTO(baseCurrencyId),
+                        converterDTOs.Currency2DTO(targetCurrencyId),
+                        exchangeRate.get().getRate());
+
+                PrintWriter printWriter = response.getWriter();
+                response.setStatus(HttpServletResponse.SC_OK);
+                printWriter.println(mapper.writeValueAsString(exchangeRateDTO));
+            }
+
+        } catch (SQLException e) {
+            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+            String jsonError = String.format(
+                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                    "Произошла ошибка при обработке запроса"
+            );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
         }
     }
 }

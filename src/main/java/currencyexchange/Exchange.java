@@ -27,26 +27,10 @@ public class Exchange {
 
     }
 
-/*
-String url = "jdbc:sqlite:my.db";
-
-        try (var conn = DriverManager.getConnection(url)) {
-            if (conn != null) {
-                var meta = conn.getMetaData();
-                System.out.println("The driver name is " + meta.getDriverName());
-                System.out.println("A new database has been created.");
-            }
-        } catch (SQLException e) {
-            System.err.println(e.getMessage());
-        }
- */
-
     private String readResourceFile(String fileName) throws IOException {
         InputStream inputStream = Exchange.class.getClassLoader().getResourceAsStream(fileName);
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             return reader.lines().collect(Collectors.joining("\n"));
         }
     }
-
-
 }

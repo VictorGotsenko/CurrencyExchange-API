@@ -1,7 +1,28 @@
 <!DOCTYPE web-app PUBLIC
- "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
- "http://java.sun.com/dtd/web-app_2_3.dtd" >
+        "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+        "http://java.sun.com/dtd/web-app_2_3.dtd" >
 
 <web-app>
+
+    <error-page>
+        <error-code>400</error-code>
+        <location>/exceptionHandler</location>
+    </error-page>
+
+    <error-page>
+        <error-code>404</error-code>
+        <location>/exceptionHandler</location>
+    </error-page>
+
+    <error-page>
+        <error-code>409</error-code>
+        <location>/exceptionHandler</location>
+    </error-page>
+
+    <error-page>
+        <error-code>500</error-code>
+        <location>/exceptionHandler</location>
+    </error-page>
+
 
 </web-app>

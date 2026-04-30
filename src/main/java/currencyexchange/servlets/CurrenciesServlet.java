@@ -1,6 +1,5 @@
 package currencyexchange.servlets;
 
-import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDTO;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
@@ -11,7 +10,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.SneakyThrows;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -24,30 +26,29 @@ import java.util.stream.Collectors;
 
 @WebServlet(name = "CurrenciesServlet", urlPatterns = "/currencies")
 public class CurrenciesServlet extends HttpServlet {
-
     // http://localhost:8080/currencies
 
     CurrenciesRepository currenciesRepository;
+    ObjectMapper mapper;
 
     @Override
     public void init() throws ServletException {
-        // Retrieve initialization parameters defined in web.xml or annotations
-//        currenciesRepository = (CurrenciesRepository) getServletContext().getAttribute("currenciesRepository");
-//        currenciesRepository = (CurrenciesRepository) getServletContext().getAttribute("currenciesRepository");
-        // hikariDataSource
-//        HikariDataSource hikariDataSource = (HikariDataSource) getServletContext().getAttribute("hikariDataSource");
-//        currenciesRepository = new CurrenciesRepositoryImpl(hikariDataSource);
         Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
         currenciesRepository = new CurrenciesRepositoryImpl(connection);
+        // Create and enable features
+        mapper = JsonMapper.builder()
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .build();
     }
 
     @SneakyThrows
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-    /* *****************************************
+    /* ******************************************
      GET /currencies
-
-     [
+    ---------------------------------------------
+    Получение списка валют. Пример ответа:
       {
         "id": 0,
         "name": "United States dollar",
@@ -60,60 +61,45 @@ public class CurrenciesServlet extends HttpServlet {
         "code": "EUR",
         "sign": "€"
       }
-     ]
-
+     --------------------------------------------
      HTTP коды ответов:
      Успех - 200
      Ошибка (например, база данных недоступна) - 500
-     ********************************************** */
+    ****************************************** */
 
-        List<Currency> listCurrencies  = currenciesRepository.getCurrencies();
+
+        List<Currency> listCurrencies = currenciesRepository.getCurrencies();
 
         if (listCurrencies.isEmpty()) {
-            //err 500
-            // 1. Устанавливаем статус 500
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            // Устанавливаю статус 500
+            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
 
-            // 2. Устанавливаем тип контента JSON
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-
-            // 3. Формируем JSON-ответ
+            // Формирую JSON-ответ
             String jsonError = String.format(
                     "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
                     "Произошла ошибка при обработке запроса"
             );
 
-            // 4. Отправляем ответ
-            PrintWriter out = response.getWriter();
-            out.print(jsonError);
-            out.flush();
-        } else {
-            // send JSON - 200 Ok
-
-            List<CurrencyDTO> listCurrencyDTO = new ArrayList<>();
-            for (Currency currency : listCurrencies) {
-                int id = currency.getId();
-                String name = currency.getName();
-                String code = currency.getCode();
-                String sign = currency.getSign();
-                listCurrencyDTO.add(new CurrencyDTO(id, name, code, sign));
-            }
-
-            PrintWriter printWriter = response.getWriter();
-
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.setHeader("Content-Security-Policy", "default-src 'self';"); //CSP (Content Security Policy)
-
-            ObjectMapper mapper = new ObjectMapper();
-            printWriter.println(mapper.writeValueAsString(listCurrencyDTO));
+            // Отправляю ответ
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
         }
+        List<CurrencyDTO> listCurrencyDTO = new ArrayList<>();
+        for (Currency currency : listCurrencies) {
+            int id = currency.getId();
+            String name = currency.getName();
+            String code = currency.getCode();
+            String sign = currency.getSign();
+            listCurrencyDTO.add(new CurrencyDTO(id, name, code, sign));
+        }
+        PrintWriter printWriter = response.getWriter();
+
+        response.setStatus(HttpServletResponse.SC_OK);
+        printWriter.println(mapper.writeValueAsString(listCurrencyDTO));
     }
 
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
-
     /* ******************************************
      POST /currencies
      --------------------------------------------
@@ -134,34 +120,20 @@ public class CurrenciesServlet extends HttpServlet {
      Ошибка (например, база данных недоступна) - 500
     ********************************************/
 
-        // Установка кодировки для корректного чтения кириллицы
-        request.setCharacterEncoding("UTF-8");
-
         // Получение данных по имени поля формы
         String name = request.getParameter("name");
         String code = request.getParameter("code");
         String sign = request.getParameter("sign");
 
-        //  Отсутствует нужное поле формы - 400
         if (name == null || code == null || sign == null) {
-            // 1. Устанавливаем статус 400
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-
-            // 2. Устанавливаем тип контента JSON
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-
-            // 3. Формируем JSON-ответ
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
-                    "{\"error\": \"HTTP Error 409 Conflict\", \"message\": \"%s\"}",
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
                     "Отсутствует нужное поле формы"
             );
 
-            // 4. Отправляем ответ
-            PrintWriter out = response.getWriter();
-            out.print(jsonError);
-            out.flush();
-            return;
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
         }
 
         //  Валюта с таким кодом уже существует - 409
@@ -172,28 +144,25 @@ public class CurrenciesServlet extends HttpServlet {
                     .map(Currency::getCode)
                     .collect(Collectors.toList());
             if (codes.contains(code)) {
-                //  Валюта с таким кодом уже существует - 409
-                // 1. Устанавливаем статус 409
-                response.setStatus(HttpServletResponse.SC_CONFLICT);
-
-                // 2. Устанавливаем тип контента JSON
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
-
-                // 3. Формируем JSON-ответ
+                request.getSession().setAttribute("errorCode", "SC_CONFLICT");
                 String jsonError = String.format(
                         "{\"error\": \"HTTP Error 409 Conflict\", \"message\": \"%s\"}",
                         "Валюта с таким кодом уже существует"
                 );
 
-                // 4. Отправляем ответ
-                PrintWriter out = response.getWriter();
-                out.print(jsonError);
-                out.flush();
+                request.getSession().setAttribute("jsonError", jsonError);
+                response.sendError(HttpServletResponse.SC_CONFLICT, jsonError);
                 return;
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+            String jsonError = String.format(
+                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                    "Произошла ошибка при обработке запроса"
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
         }
 
         // Paste currency
@@ -201,58 +170,45 @@ public class CurrenciesServlet extends HttpServlet {
         try {
             currenciesRepository.save(currency);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-
-        //4. Вернуть
-        Optional<Currency> newCurrency;
-        try {
-            newCurrency = currenciesRepository.findByCode(code);
-//            newCurrency = currenciesRepository.findByCode("");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (newCurrency.isPresent()) {
-            Currency result = newCurrency.get();
-            CurrencyDTO currencyDTO = new CurrencyDTO(
-                    result.getId(),
-                    result.getName(),
-                    result.getCode(),
-                    result.getSign());
-
-            PrintWriter printWriter = response.getWriter();
-
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.setHeader("Content-Security-Policy", "default-src 'self';"); //CSP (Content Security Policy)
-
-            ObjectMapper mapper = new ObjectMapper();
-            printWriter.println(mapper.writeValueAsString(currencyDTO));
-        } else {
-            //  Ошибка (например, база данных недоступна) - 500
-            // 1. Устанавливаем статус 500
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-
-            // 2. Устанавливаем тип контента JSON
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.setHeader("Content-Security-Policy", "default-src 'self';"); //CSP (Content Security Policy)
-
-            // 3. Формируем JSON-ответ
+            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
             String jsonError = String.format(
                     "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
                     "Произошла ошибка при обработке запроса"
             );
 
-            // 4. Отправляем ответ
-            PrintWriter out = response.getWriter();
-            out.print(jsonError);
-            out.flush();
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
         }
-    }
 
+        //4. Вернуть
+        Optional<Currency> newCurrency;
+
+        try {
+            newCurrency = currenciesRepository.findByCode(code);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (newCurrency.isEmpty()) {
+            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+            String jsonError = String.format(
+                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
+                    "Произошла ошибка при обработке запроса"
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+        }
+        Currency result = newCurrency.get();
+        CurrencyDTO currencyDTO = new CurrencyDTO(
+                result.getId(),
+                result.getName(),
+                result.getCode(),
+                result.getSign());
+
+        response.setStatus(HttpServletResponse.SC_OK);
+        PrintWriter printWriter = response.getWriter();
+        printWriter.println(mapper.writeValueAsString(currencyDTO));
+    }
 
 }

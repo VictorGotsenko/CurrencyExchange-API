@@ -1,16 +1,13 @@
 package currencyexchange.model;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 @Getter
 @Setter
-@ToString
-public class Currency extends BaseModel{
+public class Currency extends BaseModel {
 
     private int id;
     private String name;
@@ -22,5 +19,11 @@ public class Currency extends BaseModel{
         this.name = name;
         this.code = code;
         this.sign = sign;
+    }
+
+    @Override
+    public String toString() {
+        // work
+        return "{\"id\":" + id + ",\"name\":\"" + name + "\",\"code\":\"" + code + "\",\"sign\":\"" + sign + "\"}";
     }
 }

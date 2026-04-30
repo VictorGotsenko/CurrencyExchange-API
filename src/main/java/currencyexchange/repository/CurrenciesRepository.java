@@ -8,18 +8,11 @@ import java.util.Optional;
 
 public interface CurrenciesRepository {
 
-     List<Currency> getCurrencies() throws SQLException;
-     Optional<Currency> findByCode(String code) throws SQLException;
-     Optional<Currency> findById(int id) throws SQLException;
-     void save(Currency currency) throws SQLException;
+    List<Currency> getCurrencies() throws SQLException;
 
-    /*
-    save
-    find
-    add
-    get list
-     */
+    Optional<Currency> findByCode(String code) throws SQLException;
 
+    Optional<Currency> findById(int id) throws SQLException;
 
-
+    void save(Currency currency) throws SQLException;
 }

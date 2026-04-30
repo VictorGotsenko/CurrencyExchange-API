@@ -7,9 +7,10 @@ import java.math.BigDecimal;
 
 @AllArgsConstructor
 @Getter
-public class ExchangeRateDTO {
-    int id;
+public class ExchangeDTO {
     CurrencyDTO baseCurrency;
     CurrencyDTO targetCurrency;
     BigDecimal rate;
+    BigDecimal amount;
+    BigDecimal convertedAmount;
 }
