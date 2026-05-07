@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class CurrenciesRepositoryImpl implements CurrenciesRepository {
+public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
     private final Connection connection;
 
     public CurrenciesRepositoryImpl(Connection connection) {
@@ -29,7 +29,9 @@ public class CurrenciesRepositoryImpl implements CurrenciesRepository {
 
         while (true) {
             try {
-                if (!resultSet.next()) break;
+                if (!resultSet.next()) {
+                    break;
+                }
                 Currency currency = new Currency(
                         resultSet.getString("fullname"),
                         resultSet.getString("code"),
@@ -85,8 +87,8 @@ public class CurrenciesRepositoryImpl implements CurrenciesRepository {
                     resultSet.getString("sign"));
 
             currency.setId(resultSet.getInt("id"));
-            String created_at = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(created_at, currency.getFormatter());
+            String createdAt = resultSet.getString("created_at");
+            LocalDateTime date = LocalDateTime.parse(createdAt, currency.getFormatter());
             currency.setCreatedAt(date);
 
             return Optional.of(currency);
@@ -109,8 +111,8 @@ public class CurrenciesRepositoryImpl implements CurrenciesRepository {
                     resultSet.getString("sign"));
 
             currency.setId(resultSet.getInt("id"));
-            String created_at = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(created_at, currency.getFormatter());
+            String createdAt = resultSet.getString("created_at");
+            LocalDateTime date = LocalDateTime.parse(createdAt, currency.getFormatter());
             currency.setCreatedAt(date);
 
             return Optional.of(currency);

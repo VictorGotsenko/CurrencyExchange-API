@@ -12,7 +12,7 @@ import java.io.IOException;
 
 // Применяю фильтр ко всем запросам
 @WebFilter(filterName = "EncodingFilter", urlPatterns = "/*")
-public class CharacterEncodingFilter implements Filter {
+public final class CharacterEncodingFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -28,8 +28,8 @@ public class CharacterEncodingFilter implements Filter {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         // Определение политики: скрипты, стили и шрифты только с того же сайта
-        String cspValue = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; " +
-                "font-src 'self'; upgrade-insecure-requests;";
+        String cspValue = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; "
+                + "font-src 'self'; upgrade-insecure-requests;";
 
         // Установка заголовка
         httpResponse.setHeader("Content-Security-Policy", cspValue);

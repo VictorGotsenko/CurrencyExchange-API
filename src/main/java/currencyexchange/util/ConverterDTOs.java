@@ -11,7 +11,7 @@ import lombok.SneakyThrows;
 import java.sql.Connection;
 import java.util.Optional;
 
-public class ConverterDTOs {
+public final class ConverterDTOs {
 
     CurrenciesRepository currenciesRepository;
     ExchangeRatesRepository exchangeRatesRepository;
@@ -22,7 +22,7 @@ public class ConverterDTOs {
     }
 
     @SneakyThrows
-    public CurrencyDTO Currency2DTO(int id) {
+    public CurrencyDTO currencyToDTO(int id) {
 
         Optional<Currency> newCurrency = currenciesRepository.findById(id);
 

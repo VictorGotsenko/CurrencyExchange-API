@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 @WebServlet(name = "ExceptionHandler", urlPatterns = "/exceptionHandler")
-public class ExceptionHandler extends HttpServlet {
+public final class ExceptionHandler extends HttpServlet {
 //    http://localhost:8080//exceptionHandler
 
     @Override
@@ -35,6 +35,8 @@ public class ExceptionHandler extends HttpServlet {
             }
             case "SC_CONFLICT" -> {
                 response.setStatus(HttpServletResponse.SC_CONFLICT);  //409
+            }
+            default -> {
             }
         }
         PrintWriter out = response.getWriter();

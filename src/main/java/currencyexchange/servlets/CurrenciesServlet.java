@@ -25,7 +25,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @WebServlet(name = "CurrenciesServlet", urlPatterns = "/currencies")
-public class CurrenciesServlet extends HttpServlet {
+public final class CurrenciesServlet extends HttpServlet {
     // http://localhost:8080/currencies
 
     CurrenciesRepository currenciesRepository;

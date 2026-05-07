@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class Currency extends BaseModel {
+public final class Currency extends BaseModel {
 
     private int id;
     private String name;

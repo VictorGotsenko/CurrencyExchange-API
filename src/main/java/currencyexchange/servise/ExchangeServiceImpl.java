@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class ExchangeServiceImpl implements ExchangeService {
+public final class ExchangeServiceImpl implements ExchangeService {
 
     ExchangeRatesRepository exchangeRatesRepository;
 
@@ -66,22 +66,22 @@ public class ExchangeServiceImpl implements ExchangeService {
             Optional<ExchangeRate> desireExchangeUSDtoTargetCurrency = exchangeRatesRepository
                     .findByCodes("USD", targetCurrencyCode);
 
-            ExchangeRate exchangeRateUSD_A;
+            ExchangeRate exchangeRateUSDtoA;
             if (desireExchangeUSDtoBaseCurrency.isPresent()) {
-                exchangeRateUSD_A = desireExchangeUSDtoBaseCurrency.get();
+                exchangeRateUSDtoA = desireExchangeUSDtoBaseCurrency.get();
             } else {
                 return result;
             }
 
-            ExchangeRate exchangeRateUSD_B;
+            ExchangeRate exchangeRateUSDtoB;
             if (desireExchangeUSDtoTargetCurrency.isPresent()) {
-                exchangeRateUSD_B = desireExchangeUSDtoTargetCurrency.get();
+                exchangeRateUSDtoB = desireExchangeUSDtoTargetCurrency.get();
             } else {
                 return result;
             }
 
-            BigDecimal rate = exchangeRateUSD_B.getRate().divide(
-                    exchangeRateUSD_A.getRate(), 6, RoundingMode.HALF_UP);
+            BigDecimal rate = exchangeRateUSDtoB.getRate().divide(
+                    exchangeRateUSDtoA.getRate(), 6, RoundingMode.HALF_UP);
             BigDecimal convertedAmount = rate.multiply(amount);
             result.put("rate", rate);
             result.put("convertedAmount", convertedAmount);

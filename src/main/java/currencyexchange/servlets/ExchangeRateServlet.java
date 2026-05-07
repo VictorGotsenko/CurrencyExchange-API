@@ -30,7 +30,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @WebServlet(name = "ExchangeRateServlet", urlPatterns = "/exchangeRate/*")
-public class ExchangeRateServlet extends HttpServlet {
+public final class ExchangeRateServlet extends HttpServlet {
 
     ExchangeRatesRepository exchangeRatesRepository;
     CurrenciesRepository currenciesRepository;
@@ -175,8 +175,10 @@ public class ExchangeRateServlet extends HttpServlet {
 
     }
 
+    @SuppressWarnings("checkstyle:methodlength")
     @Override
-    protected void doPatch(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doPatch(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
     /* ******************************************
      Обновление существующего в базе обменного курса
      PATCH /exchangeRate/USDRUB
@@ -313,8 +315,8 @@ public class ExchangeRateServlet extends HttpServlet {
             if (exchangeRate.isPresent()) {
                 ExchangeRateDTO exchangeRateDTO = new ExchangeRateDTO(
                         exchangeRate.get().getId(),
-                        converterDTOs.Currency2DTO(baseCurrencyId),
-                        converterDTOs.Currency2DTO(targetCurrencyId),
+                        converterDTOs.currencyToDTO(baseCurrencyId),
+                        converterDTOs.currencyToDTO(targetCurrencyId),
                         exchangeRate.get().getRate());
 
                 PrintWriter printWriter = response.getWriter();

@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @WebServlet(name = "ExchangeServlet", urlPatterns = "/exchange")
-public class ExchangeServlet extends HttpServlet {
+public final class ExchangeServlet extends HttpServlet {
 
     ExchangeRatesRepository exchangeRatesRepository;
     CurrenciesRepository currenciesRepository;
@@ -169,7 +169,11 @@ public class ExchangeServlet extends HttpServlet {
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
         }
-        Map<String, BigDecimal> resultCalculation = exchangeService.crossRateCalculation(baseCurrencyCode, targetCurrencyCode, amount);
+        Map<String, BigDecimal> resultCalculation = exchangeService.crossRateCalculation(
+                baseCurrencyCode,
+                targetCurrencyCode,
+                amount);
+
         if (resultCalculation.isEmpty()) {
             request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
             String jsonError = String.format(
@@ -181,8 +185,8 @@ public class ExchangeServlet extends HttpServlet {
         }
 
         ExchangeDTO exchangeDTO = new ExchangeDTO(
-                converterDTOs.Currency2DTO(baseCurrencyId),
-                converterDTOs.Currency2DTO(targetCurrencyId),
+                converterDTOs.currencyToDTO(baseCurrencyId),
+                converterDTOs.currencyToDTO(targetCurrencyId),
                 resultCalculation.get("rate"),
                 amount,
                 resultCalculation.get("convertedAmount"));

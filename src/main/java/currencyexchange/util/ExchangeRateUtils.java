@@ -4,11 +4,11 @@ import java.math.BigDecimal;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ExchangeRateUtils {
+public final class ExchangeRateUtils {
 
-        public BigDecimal getRate(String rate) {
-         // Регулярное выражение для поиска чисел с запятой (точкой)
-         // String regex = "\\d+(,\\d+)?";
+    public BigDecimal getRate(String rate) {
+        // Регулярное выражение для поиска чисел с запятой (точкой)
+        // String regex = "\\d+(,\\d+)?";
         String regex = "\\d+(.\\d+)?";
 
         Pattern pattern = Pattern.compile(regex);

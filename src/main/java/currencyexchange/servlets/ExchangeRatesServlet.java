@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Optional;
 
 @WebServlet(name = "ExchangeRatesServlet", urlPatterns = "/exchangeRates")
-public class ExchangeRatesServlet extends HttpServlet {
+public final class ExchangeRatesServlet extends HttpServlet {
 
     private ExchangeRatesRepository exchangeRatesRepository;
     private CurrenciesRepository currenciesRepository;
@@ -95,10 +95,10 @@ public class ExchangeRatesServlet extends HttpServlet {
         List<ExchangeRateDTO> exchangeRateDTOList = new ArrayList<>();
         for (ExchangeRate exchangeRate : exchangeRateList) {
             CurrencyDTO baseCurrencyDTO = converterDTOs
-                    .Currency2DTO(exchangeRate.getBaseCurrencyId());
+                    .currencyToDTO(exchangeRate.getBaseCurrencyId());
 
             CurrencyDTO targetCurrencyDTO = converterDTOs
-                    .Currency2DTO(exchangeRate.getTargetCurrencyId());
+                    .currencyToDTO(exchangeRate.getTargetCurrencyId());
 
             exchangeRateDTOList.add(new ExchangeRateDTO(
                     exchangeRate.getId(),
@@ -113,8 +113,11 @@ public class ExchangeRatesServlet extends HttpServlet {
 
     }
 
+    @SuppressWarnings("checkstyle:methodlength")
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doPost(HttpServletRequest request,
+                          HttpServletResponse response)
+            throws IOException {
      /* ******************************************
      Добавление нового обменного курса в базу
      POST /exchangeRates
@@ -253,8 +256,8 @@ public class ExchangeRatesServlet extends HttpServlet {
                         rate);
                 exchangeRatesRepository.save(newExchangeRate);
 
-                CurrencyDTO baseCurrencyDTO = converterDTOs.Currency2DTO(baseCurrency.get().getId());
-                CurrencyDTO targetCurrencyDTO = converterDTOs.Currency2DTO(targetCurrency.get().getId());
+                CurrencyDTO baseCurrencyDTO = converterDTOs.currencyToDTO(baseCurrency.get().getId());
+                CurrencyDTO targetCurrencyDTO = converterDTOs.currencyToDTO(targetCurrency.get().getId());
                 ExchangeRateDTO exchangeRateDTO = new ExchangeRateDTO(
                         newExchangeRate.getId(),
                         baseCurrencyDTO,

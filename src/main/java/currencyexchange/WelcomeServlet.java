@@ -10,10 +10,9 @@ import java.io.PrintWriter;
 
 
 @WebServlet(name = "WelcomeServlet", urlPatterns = "/")
-public class WelcomeServlet extends HttpServlet {
+public final class WelcomeServlet extends HttpServlet {
 
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
-    {
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("text/html");
         PrintWriter out = response.getWriter();
         out.println("<html>");
@@ -27,5 +26,4 @@ public class WelcomeServlet extends HttpServlet {
         out.println("</body>");
         out.println("</html>");
     }
-
 }

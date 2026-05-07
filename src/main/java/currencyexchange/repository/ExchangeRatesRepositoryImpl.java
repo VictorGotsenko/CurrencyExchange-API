@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
+public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
     private final Connection connection;
     private final CurrenciesRepository currenciesRepository;
 
@@ -56,14 +56,18 @@ public class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
 
         while (true) {
             try {
-                if (!resultSet.next()) break;
+                if (!resultSet.next()) {
+                    break;
+                }
                 int baseCurrency = resultSet.getInt("basecurrencyid");
                 int targetCurrency = resultSet.getInt("targetcurrencyid");
                 String rate = resultSet.getString("rate");
 
                 ExchangeRate exchangeRate = new ExchangeRate(baseCurrency, targetCurrency, rate);
                 exchangeRate.setId(resultSet.getInt("id"));
-                LocalDateTime date = LocalDateTime.parse(resultSet.getString("created_at"), exchangeRate.getFormatter());
+                LocalDateTime date = LocalDateTime.parse(
+                        resultSet.getString("created_at"),
+                        exchangeRate.getFormatter());
                 exchangeRate.setCreatedAt(date);
                 result.add(exchangeRate);
             } catch (SQLException e) {
@@ -88,8 +92,8 @@ public class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
                     resultSet.getString("rate"));
 
             result.setId(resultSet.getInt("id"));
-            String created_at = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(created_at, result.getFormatter());
+            String createdAt = resultSet.getString("created_at");
+            LocalDateTime date = LocalDateTime.parse(createdAt, result.getFormatter());
             result.setCreatedAt(date);
 
             return Optional.of(result);
@@ -123,8 +127,8 @@ public class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
         if (resultSet.next()) {
             ExchangeRate result = new ExchangeRate(baseCurrencyId, targetCurrencyId, resultSet.getString("rate"));
             result.setId(resultSet.getInt("id"));
-            String created_at = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(created_at, result.getFormatter());
+            String createdAt = resultSet.getString("created_at");
+            LocalDateTime date = LocalDateTime.parse(createdAt, result.getFormatter());
             result.setCreatedAt(date);
 
             return Optional.of(result);

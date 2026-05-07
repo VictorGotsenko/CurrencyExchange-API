@@ -23,7 +23,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 @WebServlet(name = "CurrencyServlet", urlPatterns = "/currency/*")
-public class CurrencyServlet extends HttpServlet {
+public final class CurrencyServlet extends HttpServlet {
     // http://localhost:8080/currency/EUR
 
     CurrenciesRepository currenciesRepository;

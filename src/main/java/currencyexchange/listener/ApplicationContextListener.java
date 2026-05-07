@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @WebListener
-public class ApplicationContextListener implements ServletContextListener {
+public final class ApplicationContextListener implements ServletContextListener {
 
     private Connection connection;
     CurrenciesRepository currenciesRepository;

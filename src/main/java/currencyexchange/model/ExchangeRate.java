@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Setter
 @ToString
 @AllArgsConstructor
-public class ExchangeRate extends BaseModel {
+public final class ExchangeRate extends BaseModel {
     int id;
     int baseCurrencyId;
     int targetCurrencyId;
