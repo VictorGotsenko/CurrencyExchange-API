@@ -19,11 +19,14 @@ and calculate the conversion of arbitrary amounts from one currency to another.
 - GET /exchange?from={code}&to={code}&amount=10 — _Calculation of the conversion of an amount from one currency to another_
 
 ### How to use:
- * System requirements: 
-   Java v.21
-   Gradle v.8.5 or above
-   Apache Tomcat v.11 
- * Clone the project locally and run:
+ * System requirements:\
+Java v.21\
+Gradle v.8.5 or above\
+Apache Tomcat v.11
+
+ 
+ * Clone the project locally
+ * Run:
 ```shell
 make build-run
 ```
