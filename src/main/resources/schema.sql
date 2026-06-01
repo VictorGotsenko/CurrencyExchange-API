@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS currencies (
     code VARCHAR(50) NOT NULL UNIQUE,
     fullname VARCHAR(255) NOT NULL UNIQUE,
     sign VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     table_constraints
 );
 
@@ -23,7 +22,6 @@ CREATE TABLE IF NOT EXISTS exchangerates (
     basecurrencyid INTEGER NOT NULL,
     targetcurrencyid INTEGER NOT NULL,
     rate DECIMAL(6) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     table_constraints,
     FOREIGN KEY (basecurrencyid) REFERENCES currencies (id) ON DELETE CASCADE,
     FOREIGN KEY (targetcurrencyid) REFERENCES currencies (id) ON DELETE CASCADE

@@ -119,15 +119,6 @@ public final class ExchangeServlet extends HttpServlet {
             return;
         }
 
-
-        //todo сделать проверку наличие полей from, to, amount в строке запроса
-//        Map<String, String[]> parameterMap = request.getParameterMap();
-//        if (parameterMap.containsKey("from")) {
-//            // Параметр присутствует
-//            int y = 1;
-//        }
-
-
         //String baseCurrencyCode = request.getParameter("from").toUpperCase();
         String baseCurrencyCode = request.getParameter("from");
         if (null == baseCurrencyCode || baseCurrencyCode.isEmpty()) {

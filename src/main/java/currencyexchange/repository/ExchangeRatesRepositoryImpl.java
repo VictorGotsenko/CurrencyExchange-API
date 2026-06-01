@@ -9,7 +9,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -63,12 +62,8 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
                 int targetCurrency = resultSet.getInt("targetcurrencyid");
                 String rate = resultSet.getString("rate");
 
-                ExchangeRate exchangeRate = new ExchangeRate(baseCurrency, targetCurrency, rate);
+                ExchangeRate exchangeRate = new ExchangeRate(baseCurrency, targetCurrency, new BigDecimal(rate));
                 exchangeRate.setId(resultSet.getInt("id"));
-                LocalDateTime date = LocalDateTime.parse(
-                        resultSet.getString("created_at"),
-                        exchangeRate.getFormatter());
-                exchangeRate.setCreatedAt(date);
                 result.add(exchangeRate);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
@@ -86,16 +81,13 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
         ResultSet resultSet = preparedStatement.executeQuery();
 
         if (resultSet.next()) {
+
             ExchangeRate result = new ExchangeRate(
                     resultSet.getInt("basecurrencyid"),
                     resultSet.getInt("targetcurrencyid"),
-                    resultSet.getString("rate"));
+                    new BigDecimal(resultSet.getString("rate")));
 
             result.setId(resultSet.getInt("id"));
-            String createdAt = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(createdAt, result.getFormatter());
-            result.setCreatedAt(date);
-
             return Optional.of(result);
         }
         return Optional.empty();
@@ -125,11 +117,8 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
         ResultSet resultSet = preparedStatement.executeQuery();
 
         if (resultSet.next()) {
-            ExchangeRate result = new ExchangeRate(baseCurrencyId, targetCurrencyId, resultSet.getString("rate"));
+            ExchangeRate result = new ExchangeRate(baseCurrencyId, targetCurrencyId, new BigDecimal(resultSet.getString("rate")));
             result.setId(resultSet.getInt("id"));
-            String createdAt = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(createdAt, result.getFormatter());
-            result.setCreatedAt(date);
 
             return Optional.of(result);
         }
@@ -145,6 +134,4 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
         preparedStatement.setInt(2, exchangeRateId);
         preparedStatement.executeUpdate();
     }
-
-
 }

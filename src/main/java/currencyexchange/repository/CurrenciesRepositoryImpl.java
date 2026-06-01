@@ -7,7 +7,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,9 +37,6 @@ public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
                         resultSet.getString("sign"));
 
                 currency.setId(resultSet.getInt("id"));
-
-                LocalDateTime date = LocalDateTime.parse(resultSet.getString("created_at"), currency.getFormatter());
-                currency.setCreatedAt(date);
 
                 result.add(currency);
             } catch (SQLException e) {
@@ -87,10 +83,6 @@ public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
                     resultSet.getString("sign"));
 
             currency.setId(resultSet.getInt("id"));
-            String createdAt = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(createdAt, currency.getFormatter());
-            currency.setCreatedAt(date);
-
             return Optional.of(currency);
         }
         return Optional.empty();
@@ -111,9 +103,6 @@ public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
                     resultSet.getString("sign"));
 
             currency.setId(resultSet.getInt("id"));
-            String createdAt = resultSet.getString("created_at");
-            LocalDateTime date = LocalDateTime.parse(createdAt, currency.getFormatter());
-            currency.setCreatedAt(date);
 
             return Optional.of(currency);
         }

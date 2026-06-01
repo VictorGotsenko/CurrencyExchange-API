@@ -194,16 +194,6 @@ public final class ExchangeRatesServlet extends HttpServlet {
             return;
         }
 
-
-
-
-
-
-
-
-
-
-
         //  Неверный запрос - Дубль в паре  - 400
         if (baseCurrencyCode.equals(targetCurrencyCode)) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
@@ -231,9 +221,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
                     .filter(currency -> currency.getCode().equals(targetCurrencyCode))
                     .findFirst().orElse(null);
 
-
             if (baseCurrency == null || targetCurrency == null) {
-                // Одна (или обе) валюта из валютной пары не существует в БД - 404
                 String baseCode = (baseCurrency != null) ? "" : baseCurrencyCode;
                 String souz = (baseCurrency == null && targetCurrency == null) ? " и " : "";
                 String targetCode = (targetCurrency != null) ? "" : targetCurrencyCode;
@@ -251,7 +239,6 @@ public final class ExchangeRatesServlet extends HttpServlet {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
                 return;
             } else {
-                // Проверить - Валютная пара с таким кодом уже существует? - 409
                 ExchangeRate exchangeRate = exchangeRates.stream()
                         .filter(e -> e.getBaseCurrencyId() == baseCurrency.getId()
                                 && e.getTargetCurrencyId() == targetCurrency.getId())
@@ -281,7 +268,6 @@ public final class ExchangeRatesServlet extends HttpServlet {
             return;
         }
 
-        // save and return
         try {
             Optional<Currency> baseCurrency = currenciesRepository.findByCode(baseCurrencyCode);
             Optional<Currency> targetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
@@ -290,7 +276,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
                 ExchangeRate newExchangeRate = new ExchangeRate(
                         baseCurrency.get().getId(),
                         targetCurrency.get().getId(),
-                        rate);
+                        new BigDecimal(rate));
                 exchangeRatesRepository.save(newExchangeRate);
 
                 CurrencyDTO baseCurrencyDTO = converterDTOs.currencyToDTO(baseCurrency.get().getId());
