@@ -155,7 +155,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
         String targetCurrencyCode = request.getParameter("targetCurrencyCode");
         String rate = request.getParameter("rate");
 
-        if (baseCurrencyCode == null || targetCurrencyCode == null || rate == null) {
+        if (baseCurrencyCode == null || baseCurrencyCode.isEmpty() || baseCurrencyCode.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
 
             String jsonError = String.format(
@@ -167,6 +167,42 @@ public final class ExchangeRatesServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
             return;
         }
+
+        if (targetCurrencyCode == null || targetCurrencyCode.isEmpty() || targetCurrencyCode.isBlank()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Отсутствует нужное поле формы"
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
+
+        if (rate == null || rate.isEmpty() || rate.isBlank()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Отсутствует нужное поле формы"
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
+
+
+
+
+
+
+
+
+
+
 
         //  Неверный запрос - Дубль в паре  - 400
         if (baseCurrencyCode.equals(targetCurrencyCode)) {
@@ -242,6 +278,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
             );
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            return;
         }
 
         // save and return
@@ -265,7 +302,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
                         new BigDecimal(rate));
 
                 PrintWriter printWriter = response.getWriter();
-                response.setStatus(HttpServletResponse.SC_OK);
+                response.setStatus(HttpServletResponse.SC_CREATED);
                 printWriter.println(mapper.writeValueAsString(exchangeRateDTO));
             }
         } catch (SQLException e) {

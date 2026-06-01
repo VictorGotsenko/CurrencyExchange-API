@@ -58,7 +58,9 @@ public final class ExchangeServlet extends HttpServlet {
 
 
     @Override
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+    @SuppressWarnings("checkstyle:methodlength")
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ServletException {
      /* ******************************************
      Расчёт перевода определённого количества средств из одной валюты в другую
      GET /exchange?from=BASE_CURRENCY_CODE&to=TARGET_CURRENCY_CODE&amount=$AMOUNT
@@ -100,7 +102,7 @@ public final class ExchangeServlet extends HttpServlet {
 
      --------------------------------------------
      HTTP коды ответов:
-     Успех - 201
+     Успех - 200
      Отсутствует нужное поле формы - 400 +
      Валютная пара отсутствует в базе данных - 404 +
      Ошибка (например, база данных недоступна) - 500 +
@@ -114,11 +116,54 @@ public final class ExchangeServlet extends HttpServlet {
             );
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
         }
 
-        String baseCurrencyCode = request.getParameter("from").toUpperCase();
-        String targetCurrencyCode = request.getParameter("to").toUpperCase();
+
+        //todo сделать проверку наличие полей from, to, amount в строке запроса
+//        Map<String, String[]> parameterMap = request.getParameterMap();
+//        if (parameterMap.containsKey("from")) {
+//            // Параметр присутствует
+//            int y = 1;
+//        }
+
+
+        //String baseCurrencyCode = request.getParameter("from").toUpperCase();
+        String baseCurrencyCode = request.getParameter("from");
+        if (null == baseCurrencyCode || baseCurrencyCode.isEmpty()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Валюта не найдена"
+            );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
+
+        String targetCurrencyCode = request.getParameter("to");
+        if (null == targetCurrencyCode || targetCurrencyCode.isEmpty()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Валюта не найдена"
+            );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
+
         String amountParameter = request.getParameter("amount"); // хорошо бы это проверить что цифра есть
+        if (null == amountParameter || amountParameter.isEmpty()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Валюта не найдена"
+            );
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
 
         BigDecimal amount = exchangeRateUtils.getRate(amountParameter);
         if (amount.compareTo(new BigDecimal("0")) == -1) {
@@ -136,8 +181,10 @@ public final class ExchangeServlet extends HttpServlet {
         int baseCurrencyId = 0;
         int targetCurrencyId = 0;
         try {
-            Optional<Currency> desiredBaseCurrency = currenciesRepository.findByCode(baseCurrencyCode);
-            Optional<Currency> desiredTargetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
+            Optional<Currency> desiredBaseCurrency = currenciesRepository
+                    .findByCode(baseCurrencyCode.toUpperCase());
+            Optional<Currency> desiredTargetCurrency = currenciesRepository
+                    .findByCode(targetCurrencyCode.toUpperCase());
 
             if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
                 String baseCode = (desiredBaseCurrency.isPresent()) ? "" : baseCurrencyCode;

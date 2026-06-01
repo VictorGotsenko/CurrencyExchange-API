@@ -98,6 +98,7 @@ public final class CurrenciesServlet extends HttpServlet {
         printWriter.println(mapper.writeValueAsString(listCurrencyDTO));
     }
 
+    @SuppressWarnings("checkstyle:methodlength")
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
     /* ******************************************
@@ -125,7 +126,8 @@ public final class CurrenciesServlet extends HttpServlet {
         String code = request.getParameter("code");
         String sign = request.getParameter("sign");
 
-        if (name == null || code == null || sign == null) {
+        // name= пусто/пробелы → 400 + {message}
+        if (name == null || name.isEmpty() || name.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -134,7 +136,45 @@ public final class CurrenciesServlet extends HttpServlet {
 
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
         }
+
+        if (code == null || code.isEmpty() || code.isBlank()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Отсутствует нужное поле формы"
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
+
+        if (sign == null || sign.isEmpty() || sign.isBlank()) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Отсутствует нужное поле формы"
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
+
+        if (sign != null && (sign.length() > 2)) {
+            request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
+                    "Отсутствует нужное поле формы"
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
+        }
+
 
         //  Валюта с таким кодом уже существует - 409
         try {
@@ -163,6 +203,7 @@ public final class CurrenciesServlet extends HttpServlet {
 
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            return;
         }
 
         // Paste currency
@@ -178,6 +219,7 @@ public final class CurrenciesServlet extends HttpServlet {
 
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            return;
         }
 
         //4. Вернуть
@@ -198,6 +240,7 @@ public final class CurrenciesServlet extends HttpServlet {
 
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            return;
         }
         Currency result = newCurrency.get();
         CurrencyDTO currencyDTO = new CurrencyDTO(
@@ -206,9 +249,8 @@ public final class CurrenciesServlet extends HttpServlet {
                 result.getCode(),
                 result.getSign());
 
-        response.setStatus(HttpServletResponse.SC_OK);
+        response.setStatus(HttpServletResponse.SC_CREATED);
         PrintWriter printWriter = response.getWriter();
         printWriter.println(mapper.writeValueAsString(currencyDTO));
     }
-
 }

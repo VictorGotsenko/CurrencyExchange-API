@@ -54,8 +54,12 @@ public final class ExchangeServiceImpl implements ExchangeService {
 
             if (exchangeRateOptional.isPresent()) {
                 ExchangeRate exchangeRateAB = exchangeRateOptional.get();
-                BigDecimal convertedAmount = exchangeRateAB.getRate().multiply(amount);
-                result.put("rate", exchangeRateAB.getRate());
+
+                // reversRate = 1/directRate
+                BigDecimal directRate = exchangeRateAB.getRate();
+                BigDecimal reversRate = BigDecimal.ONE.divide(directRate, 6, RoundingMode.HALF_UP);
+                BigDecimal convertedAmount = reversRate.multiply(amount);
+                result.put("rate", reversRate);
                 result.put("convertedAmount", convertedAmount);
                 return result;
             }
