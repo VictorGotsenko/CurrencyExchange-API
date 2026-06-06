@@ -1,6 +1,6 @@
 package currencyexchange.servlets;
 
-import currencyexchange.dto.CurrencyDTO;
+import currencyexchange.dto.CurrencyDto;
 import currencyexchange.dto.ExchangeRateDTO;
 import currencyexchange.model.Currency;
 import currencyexchange.model.ExchangeRate;
@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -94,10 +93,10 @@ public final class ExchangeRatesServlet extends HttpServlet {
 
         List<ExchangeRateDTO> exchangeRateDTOList = new ArrayList<>();
         for (ExchangeRate exchangeRate : exchangeRateList) {
-            CurrencyDTO baseCurrencyDTO = converterDTOs
+            CurrencyDto baseCurrencyDTO = converterDTOs
                     .currencyToDTO(exchangeRate.getBaseCurrencyId());
 
-            CurrencyDTO targetCurrencyDTO = converterDTOs
+            CurrencyDto targetCurrencyDTO = converterDTOs
                     .currencyToDTO(exchangeRate.getTargetCurrencyId());
 
             exchangeRateDTOList.add(new ExchangeRateDTO(
@@ -110,7 +109,6 @@ public final class ExchangeRatesServlet extends HttpServlet {
         PrintWriter printWriter = response.getWriter();
         response.setStatus(HttpServletResponse.SC_OK);
         printWriter.println(mapper.writeValueAsString(exchangeRateDTOList));
-
     }
 
     @SuppressWarnings("checkstyle:methodlength")
@@ -209,96 +207,73 @@ public final class ExchangeRatesServlet extends HttpServlet {
         }
 
         // checks
-        try {
-            List<Currency> currencies = currenciesRepository.getCurrencies();
-            List<ExchangeRate> exchangeRates = exchangeRatesRepository.getExchangeRates();
+        List<Currency> currencies = currenciesRepository.getCurrencies();
+        List<ExchangeRate> exchangeRates = exchangeRatesRepository.getExchangeRates();
 
-            Currency baseCurrency = currencies.stream()
-                    .filter(currency -> currency.getCode().equals(baseCurrencyCode))
+        Currency baseCurrency = currencies.stream()
+                .filter(currency -> currency.getCode().equals(baseCurrencyCode))
+                .findFirst().orElse(null);
+
+        Currency targetCurrency = currencies.stream()
+                .filter(currency -> currency.getCode().equals(targetCurrencyCode))
+                .findFirst().orElse(null);
+
+        if (baseCurrency == null || targetCurrency == null) {
+            String baseCode = (baseCurrency != null) ? "" : baseCurrencyCode;
+            String souz = (baseCurrency == null && targetCurrency == null) ? " и " : "";
+            String targetCode = (targetCurrency != null) ? "" : targetCurrencyCode;
+
+            String errorMsg = "Валюта " + baseCode + souz + targetCode
+                    + " из валютной пары не существует в БД ";
+
+            request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
+            String jsonError = String.format(
+                    "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
+                    errorMsg
+            );
+
+            request.getSession().setAttribute("jsonError", jsonError);
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
+            return;
+        } else {
+            ExchangeRate exchangeRate = exchangeRates.stream()
+                    .filter(e -> e.getBaseCurrencyId() == baseCurrency.getId()
+                            && e.getTargetCurrencyId() == targetCurrency.getId())
                     .findFirst().orElse(null);
-
-            Currency targetCurrency = currencies.stream()
-                    .filter(currency -> currency.getCode().equals(targetCurrencyCode))
-                    .findFirst().orElse(null);
-
-            if (baseCurrency == null || targetCurrency == null) {
-                String baseCode = (baseCurrency != null) ? "" : baseCurrencyCode;
-                String souz = (baseCurrency == null && targetCurrency == null) ? " и " : "";
-                String targetCode = (targetCurrency != null) ? "" : targetCurrencyCode;
-
-                String errorMsg = "Валюта " + baseCode + souz + targetCode
-                        + " из валютной пары не существует в БД ";
-
-                request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
+            if (null != exchangeRate) {
+                request.getSession().setAttribute("errorCode", "SC_CONFLICT");
                 String jsonError = String.format(
-                        "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
-                        errorMsg
+                        "{\"error\": \"HTTP Error 409 Conflict\", \"message\": \"%s\"}",
+                        "Валютная пара с таким кодом уже существует"
                 );
 
                 request.getSession().setAttribute("jsonError", jsonError);
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
+                response.sendError(HttpServletResponse.SC_CONFLICT, jsonError);
                 return;
-            } else {
-                ExchangeRate exchangeRate = exchangeRates.stream()
-                        .filter(e -> e.getBaseCurrencyId() == baseCurrency.getId()
-                                && e.getTargetCurrencyId() == targetCurrency.getId())
-                        .findFirst().orElse(null);
-                if (null != exchangeRate) {
-                    request.getSession().setAttribute("errorCode", "SC_CONFLICT");
-                    String jsonError = String.format(
-                            "{\"error\": \"HTTP Error 409 Conflict\", \"message\": \"%s\"}",
-                            "Валютная пара с таким кодом уже существует"
-                    );
-
-                    request.getSession().setAttribute("jsonError", jsonError);
-                    response.sendError(HttpServletResponse.SC_CONFLICT, jsonError);
-                    return;
-                }
             }
-
-
-        } catch (SQLException e) {
-            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
-            String jsonError = String.format(
-                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
-                    "Произошла ошибка при обработке запроса"
-            );
-            request.getSession().setAttribute("jsonError", jsonError);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
-            return;
         }
 
-        try {
-            Optional<Currency> baseCurrency = currenciesRepository.findByCode(baseCurrencyCode);
-            Optional<Currency> targetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
+        Optional<Currency> baseAddCurrency = currenciesRepository.findByCode(baseCurrencyCode);
+        Optional<Currency> targetAddCurrency = currenciesRepository.findByCode(targetCurrencyCode);
 
-            if (baseCurrency.isPresent() && targetCurrency.isPresent()) {
-                ExchangeRate newExchangeRate = new ExchangeRate(
-                        baseCurrency.get().getId(),
-                        targetCurrency.get().getId(),
-                        new BigDecimal(rate));
-                exchangeRatesRepository.save(newExchangeRate);
+        if (baseAddCurrency.isPresent() && targetAddCurrency.isPresent()) {
+            ExchangeRate newExchangeRate = new ExchangeRate(
+                    baseAddCurrency.get().getId(),
+                    targetAddCurrency.get().getId(),
+                    new BigDecimal(rate));
+            exchangeRatesRepository.save(newExchangeRate);
 
-                CurrencyDTO baseCurrencyDTO = converterDTOs.currencyToDTO(baseCurrency.get().getId());
-                CurrencyDTO targetCurrencyDTO = converterDTOs.currencyToDTO(targetCurrency.get().getId());
-                ExchangeRateDTO exchangeRateDTO = new ExchangeRateDTO(
-                        newExchangeRate.getId(),
-                        baseCurrencyDTO,
-                        targetCurrencyDTO,
-                        new BigDecimal(rate));
+            CurrencyDto baseCurrencyDTO = converterDTOs.currencyToDTO(baseAddCurrency.get().getId());
+            CurrencyDto targetCurrencyDTO = converterDTOs.currencyToDTO(targetAddCurrency.get().getId());
+            ExchangeRateDTO exchangeRateDTO = new ExchangeRateDTO(
+                    newExchangeRate.getId(),
+                    baseCurrencyDTO,
+                    targetCurrencyDTO,
+                    new BigDecimal(rate));
 
-                PrintWriter printWriter = response.getWriter();
-                response.setStatus(HttpServletResponse.SC_CREATED);
-                printWriter.println(mapper.writeValueAsString(exchangeRateDTO));
-            }
-        } catch (SQLException e) {
-            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
-            String jsonError = String.format(
-                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
-                    "Произошла ошибка при обработке запроса"
-            );
-            request.getSession().setAttribute("jsonError", jsonError);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            PrintWriter printWriter = response.getWriter();
+            response.setStatus(HttpServletResponse.SC_CREATED);
+            printWriter.println(mapper.writeValueAsString(exchangeRateDTO));
         }
     }
 }

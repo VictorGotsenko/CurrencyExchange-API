@@ -6,7 +6,7 @@ import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
-public class CurrencyDTO {
+public class CurrencyDto {
     private int id;
     private String name;
     private String code;

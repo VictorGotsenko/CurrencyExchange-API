@@ -7,6 +7,6 @@ import java.util.List;
 
 @AllArgsConstructor
 @Getter
-public class CurrenciesDTO {
-    List<CurrencyDTO> listCurrencyDTO;
+public class CurrenciesDto {
+    List<CurrencyDto> currencyDtos;
 }

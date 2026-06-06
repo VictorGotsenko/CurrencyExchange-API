@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -60,7 +59,7 @@ public final class ExchangeServlet extends HttpServlet {
     @Override
     @SuppressWarnings("checkstyle:methodlength")
     public void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws IOException, ServletException {
+            throws IOException {
      /* ******************************************
      Расчёт перевода определённого количества средств из одной валюты в другую
      GET /exchange?from=BASE_CURRENCY_CODE&to=TARGET_CURRENCY_CODE&amount=$AMOUNT
@@ -167,46 +166,33 @@ public final class ExchangeServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
         }
 
-        Currency baseCurrency;
-        Currency targetCurrency;
-        int baseCurrencyId = 0;
-        int targetCurrencyId = 0;
-        try {
-            Optional<Currency> desiredBaseCurrency = currenciesRepository
-                    .findByCode(baseCurrencyCode.toUpperCase());
-            Optional<Currency> desiredTargetCurrency = currenciesRepository
-                    .findByCode(targetCurrencyCode.toUpperCase());
+        Optional<Currency> desiredBaseCurrency = currenciesRepository
+                .findByCode(baseCurrencyCode.toUpperCase());
+        Optional<Currency> desiredTargetCurrency = currenciesRepository
+                .findByCode(targetCurrencyCode.toUpperCase());
 
-            if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
-                String baseCode = (desiredBaseCurrency.isPresent()) ? "" : baseCurrencyCode;
-                String souz = (desiredBaseCurrency.isEmpty() && desiredTargetCurrency.isEmpty()) ? " и " : "";
-                String targetCode = (desiredTargetCurrency.isPresent()) ? "" : targetCurrencyCode;
+        if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
+            String baseCode = (desiredBaseCurrency.isPresent()) ? "" : baseCurrencyCode;
+            String souz = (desiredBaseCurrency.isEmpty() && desiredTargetCurrency.isEmpty()) ? " и " : "";
+            String targetCode = (desiredTargetCurrency.isPresent()) ? "" : targetCurrencyCode;
 
-                String errorMsg = "Валюта " + baseCode + souz + targetCode
-                        + " из валютной пары не существует в БД ";
+            String errorMsg = "Валюта " + baseCode + souz + targetCode
+                    + " из валютной пары не существует в БД ";
 
-                request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
-                String jsonError = String.format(
-                        "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
-                        "Валюта не найдена"
-                );
-                request.getSession().setAttribute("jsonError", jsonError);
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
-            } else {
-                baseCurrency = desiredBaseCurrency.get();
-                baseCurrencyId = baseCurrency.getId();
-                targetCurrency = desiredTargetCurrency.get();
-                targetCurrencyId = targetCurrency.getId();
-            }
-        } catch (SQLException e) {
-            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+            request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
             String jsonError = String.format(
-                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
-                    "Произошла ошибка при обработке запроса"
+                    "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
+                    "Валюта не найдена"
             );
             request.getSession().setAttribute("jsonError", jsonError);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, jsonError);
+            return;
         }
+        Currency baseCurrency = desiredBaseCurrency.get();
+        int baseCurrencyId = baseCurrency.getId();
+        Currency targetCurrency = desiredTargetCurrency.get();
+        int targetCurrencyId = targetCurrency.getId();
+
         Map<String, BigDecimal> resultCalculation = exchangeService.crossRateCalculation(
                 baseCurrencyCode,
                 targetCurrencyCode,
@@ -232,6 +218,5 @@ public final class ExchangeServlet extends HttpServlet {
         PrintWriter printWriter = response.getWriter();
         response.setStatus(HttpServletResponse.SC_OK);
         printWriter.println(mapper.writeValueAsString(exchangeDTO));
-
-    } // end doGet
+    }
 }

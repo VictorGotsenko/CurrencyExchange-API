@@ -1,22 +1,26 @@
 package currencyexchange.servise;
 
+import currencyexchange.model.Currency;
 import currencyexchange.model.ExchangeRate;
+import currencyexchange.repository.CurrenciesRepository;
+import currencyexchange.repository.CurrenciesRepositoryImpl;
 import currencyexchange.repository.ExchangeRatesRepository;
 import currencyexchange.repository.ExchangeRatesRepositoryImpl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 public final class ExchangeServiceImpl implements ExchangeService {
 
+    CurrenciesRepository currenciesRepository;
     ExchangeRatesRepository exchangeRatesRepository;
 
     public ExchangeServiceImpl(Connection connection) {
+        currenciesRepository = new CurrenciesRepositoryImpl(connection);
         exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
     }
 
@@ -34,66 +38,78 @@ public final class ExchangeServiceImpl implements ExchangeService {
          */
 
         Map<String, BigDecimal> result = new HashMap<>();
-        try {
-            // найти АБ прямой
-            Optional<ExchangeRate> exchangeRateOptional = exchangeRatesRepository
-                    .findByCodes(baseCurrencyCode, targetCurrencyCode);
 
-            if (exchangeRateOptional.isPresent()) {
-                ExchangeRate exchangeRateAB = exchangeRateOptional.get();
+        Optional<Currency> baseCurrency = currenciesRepository.findByCode(baseCurrencyCode);
+        if (baseCurrency.isEmpty()) {
+            return result;
+        }
+        int baseCurrencyId = baseCurrency.get().getId();
 
-                BigDecimal convertedAmount = exchangeRateAB.getRate().multiply(amount);
-                result.put("rate", exchangeRateAB.getRate());
-                result.put("convertedAmount", convertedAmount);
-                return result;
-            }
+        Optional<Currency> targetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
+        if (targetCurrency.isEmpty()) {
+            return result;
+        }
+        int targetCurrencyId = targetCurrency.get().getId();
+        Optional<Currency> usd = currenciesRepository.findByCode("USD");
+        if (usd.isEmpty()) {
+            return result;
+        }
+        int usdId = usd.get().getId();
 
-            // найти БА обратный
-            exchangeRateOptional = exchangeRatesRepository
-                    .findByCodes(targetCurrencyCode, baseCurrencyCode);
+        // direct A-B
+        Optional<ExchangeRate> exchangeRateOptional = exchangeRatesRepository
+                .findByCurrencyIDs(baseCurrencyId, targetCurrencyId);
 
-            if (exchangeRateOptional.isPresent()) {
-                ExchangeRate exchangeRateAB = exchangeRateOptional.get();
+        if (exchangeRateOptional.isPresent()) {
+            ExchangeRate exchangeRateAB = exchangeRateOptional.get();
 
-                // reversRate = 1/directRate
-                BigDecimal directRate = exchangeRateAB.getRate();
-                BigDecimal reversRate = BigDecimal.ONE.divide(directRate, 6, RoundingMode.HALF_UP);
-                BigDecimal convertedAmount = reversRate.multiply(amount);
-                result.put("rate", reversRate);
-                result.put("convertedAmount", convertedAmount);
-                return result;
-            }
-
-            // найти USD-A и USD-B
-            Optional<ExchangeRate> desireExchangeUSDtoBaseCurrency = exchangeRatesRepository
-                    .findByCodes("USD", baseCurrencyCode);
-            Optional<ExchangeRate> desireExchangeUSDtoTargetCurrency = exchangeRatesRepository
-                    .findByCodes("USD", targetCurrencyCode);
-
-            ExchangeRate exchangeRateUSDtoA;
-            if (desireExchangeUSDtoBaseCurrency.isPresent()) {
-                exchangeRateUSDtoA = desireExchangeUSDtoBaseCurrency.get();
-            } else {
-                return result;
-            }
-
-            ExchangeRate exchangeRateUSDtoB;
-            if (desireExchangeUSDtoTargetCurrency.isPresent()) {
-                exchangeRateUSDtoB = desireExchangeUSDtoTargetCurrency.get();
-            } else {
-                return result;
-            }
-
-            BigDecimal rate = exchangeRateUSDtoB.getRate().divide(
-                    exchangeRateUSDtoA.getRate(), 6, RoundingMode.HALF_UP);
-            BigDecimal convertedAmount = rate.multiply(amount);
-            result.put("rate", rate);
+            BigDecimal convertedAmount = exchangeRateAB.getRate().multiply(amount);
+            result.put("rate", exchangeRateAB.getRate());
             result.put("convertedAmount", convertedAmount);
             return result;
-        } catch (SQLException e) {
-            System.err.println("Ошибка при работе с БД: " + e.getMessage());
-            // e.printStackTrace();
         }
+
+        // revers B-A
+        exchangeRateOptional = exchangeRatesRepository
+                .findByCurrencyIDs(targetCurrencyId, baseCurrencyId);
+
+        if (exchangeRateOptional.isPresent()) {
+            ExchangeRate exchangeRateAB = exchangeRateOptional.get();
+
+            // reversRate = 1/directRate
+            BigDecimal directRate = exchangeRateAB.getRate();
+            BigDecimal reversRate = BigDecimal.ONE.divide(directRate, 6, RoundingMode.HALF_UP);
+            BigDecimal convertedAmount = reversRate.multiply(amount);
+            result.put("rate", reversRate);
+            result.put("convertedAmount", convertedAmount);
+            return result;
+        }
+
+        // transit USD-A, USD-B -> A-B
+        Optional<ExchangeRate> desireExchangeUSDtoBaseCurrency = exchangeRatesRepository
+                .findByCurrencyIDs(usdId, baseCurrencyId);
+        Optional<ExchangeRate> desireExchangeUSDtoTargetCurrency = exchangeRatesRepository
+                .findByCurrencyIDs(usdId, targetCurrencyId);
+
+        ExchangeRate exchangeRateUSDtoA;
+        if (desireExchangeUSDtoBaseCurrency.isPresent()) {
+            exchangeRateUSDtoA = desireExchangeUSDtoBaseCurrency.get();
+        } else {
+            return result;
+        }
+
+        ExchangeRate exchangeRateUSDtoB;
+        if (desireExchangeUSDtoTargetCurrency.isPresent()) {
+            exchangeRateUSDtoB = desireExchangeUSDtoTargetCurrency.get();
+        } else {
+            return result;
+        }
+
+        BigDecimal rate = exchangeRateUSDtoB.getRate().divide(
+                exchangeRateUSDtoA.getRate(), 6, RoundingMode.HALF_UP);
+        BigDecimal convertedAmount = rate.multiply(amount);
+        result.put("rate", rate);
+        result.put("convertedAmount", convertedAmount);
         return result;
     }
 }

@@ -1,6 +1,6 @@
 package currencyexchange.util;
 
-import currencyexchange.dto.CurrencyDTO;
+import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
 import currencyexchange.repository.CurrenciesRepositoryImpl;
@@ -22,16 +22,16 @@ public final class ConverterDTOs {
     }
 
     @SneakyThrows
-    public CurrencyDTO currencyToDTO(int id) {
+    public CurrencyDto currencyToDTO(int id) {
 
         Optional<Currency> newCurrency = currenciesRepository.findById(id);
 
         if (newCurrency.isEmpty()) {
-            return new CurrencyDTO(-1, "", "", "");
+            return new CurrencyDto(-1, "", "", "");
         }
 
         Currency result = newCurrency.get();
-        CurrencyDTO currencyDTO = new CurrencyDTO(
+        CurrencyDto currencyDTO = new CurrencyDto(
                 result.getId(),
                 result.getName(),
                 result.getCode(),

@@ -12,6 +12,9 @@ import java.math.BigDecimal;
 @ToString
 @AllArgsConstructor
 public final class ExchangeRate {
+
+    // LONG для ID подходит лучше. Но в SQLite нет long
+    // for details https://www.sqlite.org/datatype3.html#storage_classes_and_datatypes
     private int id;
     private int baseCurrencyId;
     private int targetCurrencyId;
