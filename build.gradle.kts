@@ -40,7 +40,6 @@ dependencies {
 
     //Gretty
     implementation("org.gretty:gretty-runner-jetty:5.0.2")
-
 }
 
 checkstyle {

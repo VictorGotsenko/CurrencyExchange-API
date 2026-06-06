@@ -9,7 +9,6 @@ import java.io.IOException;
 
 
 @WebServlet(name = "WelcomeServlet", urlPatterns = "/welcome")
-//@WebServlet(name = "WelcomeServlet", urlPatterns = {"/", "/index.html"})
 public final class WelcomeServlet extends HttpServlet {
 
     @Override

@@ -1,7 +1,7 @@
 package currencyexchange.servlets;
 
 
-import currencyexchange.dto.CurrencyDTO;
+import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
 import currencyexchange.repository.CurrenciesRepositoryImpl;
@@ -19,7 +19,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 @WebServlet(name = "CurrencyServlet", urlPatterns = "/currency/*")
@@ -79,41 +78,28 @@ public final class CurrencyServlet extends HttpServlet {
 
         List<Currency> currencies;
         Currency result;
-        try {
-            currencies = currenciesRepository.getCurrencies();
-            result = currencies.stream()
-                    .filter(currency -> currency.getCode().equals(codeCurrency))
-                    .findFirst().orElse(null);
+        currencies = currenciesRepository.getCurrencies();
+        result = currencies.stream()
+                .filter(currency -> currency.getCode().equals(codeCurrency))
+                .findFirst().orElse(null);
 
-            if (result == null) {
-                // Валюта не найдена - 404
-                request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
-                String jsonError = String.format(
-                        "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
-                        "Код валюты не найден"
-                );
-                request.getSession().setAttribute("jsonError", jsonError);
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
-            }
-            CurrencyDTO currencyDTO = new CurrencyDTO(
-                    result.getId(),
-                    result.getName(),
-                    result.getCode(),
-                    result.getSign());
-
-            response.setStatus(HttpServletResponse.SC_OK);
-            PrintWriter printWriter = response.getWriter();
-            printWriter.println(mapper.writeValueAsString(currencyDTO));
-
-        } catch (SQLException e) {
-            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+        if (result == null) {
+            request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
             String jsonError = String.format(
-                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
-                    "Произошла ошибка при обработке запроса"
+                    "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
+                    "Код валюты не найден"
             );
-
             request.getSession().setAttribute("jsonError", jsonError);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
         }
+        CurrencyDto currencyDTO = new CurrencyDto(
+                result.getId(),
+                result.getName(),
+                result.getCode(),
+                result.getSign());
+
+        response.setStatus(HttpServletResponse.SC_OK);
+        PrintWriter printWriter = response.getWriter();
+        printWriter.println(mapper.writeValueAsString(currencyDTO));
     }
 }

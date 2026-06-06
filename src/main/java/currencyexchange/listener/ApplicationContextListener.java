@@ -29,7 +29,6 @@ public final class ApplicationContextListener implements ServletContextListener 
     CurrenciesRepository currenciesRepository;
     ExchangeRatesRepository exchangeRatesRepository;
 
-    // Включение поддержки внешних ключей
     private static final String JDBC_URL = "jdbc:sqlite:currencies.sqlite?foreign_keys=true";
 
     private static String readResourceFile(String fileName) throws IOException {
@@ -46,16 +45,13 @@ public final class ApplicationContextListener implements ServletContextListener 
         final ServletContext servletContext = servletContextEvent.getServletContext();
 
         try {
-            // Загрузка драйвера и подключение
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection(JDBC_URL);
 
-            // Включение поддержки внешних ключей
             Statement statement = connection.createStatement();
             statement.execute("PRAGMA foreign_keys = ON;");
             log.info("Внешние ключи включены.");
 
-            // установка атрибута
             servletContext.setAttribute("ConnectionToDB", connection);
 
             currenciesRepository = new CurrenciesRepositoryImpl(connection);

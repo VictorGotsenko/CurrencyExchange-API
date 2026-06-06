@@ -18,7 +18,6 @@ public final class ExceptionHandler extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // Получаю существующую сессию (false - не создавать новую, если нет)
         HttpSession session = request.getSession(false);
         String errorCode = (String) session.getAttribute("errorCode");
 

@@ -8,8 +8,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Getter
 public class ExchangeDTO {
-    CurrencyDTO baseCurrency;
-    CurrencyDTO targetCurrency;
+    CurrencyDto baseCurrency;
+    CurrencyDto targetCurrency;
     BigDecimal rate;
     BigDecimal amount;
     BigDecimal convertedAmount;

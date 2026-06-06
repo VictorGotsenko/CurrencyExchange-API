@@ -1,6 +1,6 @@
 package currencyexchange.servlets;
 
-import currencyexchange.dto.CurrencyDTO;
+import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
 import currencyexchange.repository.CurrenciesRepositoryImpl;
@@ -18,7 +18,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -67,30 +66,24 @@ public final class CurrenciesServlet extends HttpServlet {
      Ошибка (например, база данных недоступна) - 500
     ****************************************** */
 
-
         List<Currency> listCurrencies = currenciesRepository.getCurrencies();
 
         if (listCurrencies.isEmpty()) {
-            // Устанавливаю статус 500
             request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
-
-            // Формирую JSON-ответ
             String jsonError = String.format(
                     "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
                     "Произошла ошибка при обработке запроса"
             );
-
-            // Отправляю ответ
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
         }
-        List<CurrencyDTO> listCurrencyDTO = new ArrayList<>();
+        List<CurrencyDto> listCurrencyDTO = new ArrayList<>();
         for (Currency currency : listCurrencies) {
             int id = currency.getId();
             String name = currency.getName();
             String code = currency.getCode();
             String sign = currency.getSign();
-            listCurrencyDTO.add(new CurrencyDTO(id, name, code, sign));
+            listCurrencyDTO.add(new CurrencyDto(id, name, code, sign));
         }
         PrintWriter printWriter = response.getWriter();
 
@@ -121,12 +114,10 @@ public final class CurrenciesServlet extends HttpServlet {
      Ошибка (например, база данных недоступна) - 500
     ********************************************/
 
-        // Получение данных по имени поля формы
         String name = request.getParameter("name");
         String code = request.getParameter("code");
         String sign = request.getParameter("sign");
 
-        // name= пусто/пробелы → 400 + {message}
         if (name == null || name.isEmpty() || name.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
@@ -175,62 +166,28 @@ public final class CurrenciesServlet extends HttpServlet {
             return;
         }
 
+        List<Currency> currencies = currenciesRepository.getCurrencies();
 
-        //  Валюта с таким кодом уже существует - 409
-        try {
-            List<Currency> currencies = currenciesRepository.getCurrencies();
-
-            List<String> codes = currencies.stream()
-                    .map(Currency::getCode)
-                    .collect(Collectors.toList());
-            if (codes.contains(code)) {
-                request.getSession().setAttribute("errorCode", "SC_CONFLICT");
-                String jsonError = String.format(
-                        "{\"error\": \"HTTP Error 409 Conflict\", \"message\": \"%s\"}",
-                        "Валюта с таким кодом уже существует"
-                );
-
-                request.getSession().setAttribute("jsonError", jsonError);
-                response.sendError(HttpServletResponse.SC_CONFLICT, jsonError);
-                return;
-            }
-        } catch (SQLException e) {
-            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
+        List<String> codes = currencies.stream()
+                .map(Currency::getCode)
+                .collect(Collectors.toList());
+        if (codes.contains(code)) {
+            request.getSession().setAttribute("errorCode", "SC_CONFLICT");
             String jsonError = String.format(
-                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
-                    "Произошла ошибка при обработке запроса"
+                    "{\"error\": \"HTTP Error 409 Conflict\", \"message\": \"%s\"}",
+                    "Валюта с таким кодом уже существует"
             );
 
             request.getSession().setAttribute("jsonError", jsonError);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
+            response.sendError(HttpServletResponse.SC_CONFLICT, jsonError);
             return;
         }
 
-        // Paste currency
         Currency currency = new Currency(name, code, sign);
-        try {
-            currenciesRepository.save(currency);
-        } catch (SQLException e) {
-            request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
-            String jsonError = String.format(
-                    "{\"error\": \"Internal Server Error\", \"message\": \"%s\"}",
-                    "Произошла ошибка при обработке запроса"
-            );
+        currenciesRepository.save(currency);
 
-            request.getSession().setAttribute("jsonError", jsonError);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, jsonError);
-            return;
-        }
-
-        //4. Вернуть
         Optional<Currency> newCurrency;
-
-        try {
-            newCurrency = currenciesRepository.findByCode(code);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
+        newCurrency = currenciesRepository.findByCode(code);
         if (newCurrency.isEmpty()) {
             request.getSession().setAttribute("errorCode", "SC_INTERNAL_SERVER_ERROR");
             String jsonError = String.format(
@@ -243,7 +200,7 @@ public final class CurrenciesServlet extends HttpServlet {
             return;
         }
         Currency result = newCurrency.get();
-        CurrencyDTO currencyDTO = new CurrencyDTO(
+        CurrencyDto currencyDTO = new CurrencyDto(
                 result.getId(),
                 result.getName(),
                 result.getCode(),
