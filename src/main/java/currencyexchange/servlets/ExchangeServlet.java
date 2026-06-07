@@ -169,10 +169,6 @@ public final class ExchangeServlet extends HttpServlet {
                 .findByCode(targetCurrencyCode.toUpperCase());
 
         if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
-            String baseCode = (desiredBaseCurrency.isPresent()) ? "" : baseCurrencyCode;
-            String souz = (desiredBaseCurrency.isEmpty() && desiredTargetCurrency.isEmpty()) ? " и " : "";
-            String targetCode = (desiredTargetCurrency.isPresent()) ? "" : targetCurrencyCode;
-
             request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",

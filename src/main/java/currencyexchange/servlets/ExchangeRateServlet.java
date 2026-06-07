@@ -229,7 +229,7 @@ public final class ExchangeRateServlet extends HttpServlet {
 
         String requestBody = request.getReader().lines()
                 .collect(Collectors.joining(System.lineSeparator()));
-        if (requestBody.isEmpty() || requestBody.isBlank()) {
+        if (requestBody.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -259,7 +259,7 @@ public final class ExchangeRateServlet extends HttpServlet {
         Optional<Currency> desiredTargetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
         if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
             request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
-            String jsonError = null;
+            String jsonError;
             if (desiredBaseCurrency.isEmpty()) {
                 jsonError = String.format(
                         "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",
