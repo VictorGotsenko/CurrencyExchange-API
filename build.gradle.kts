@@ -28,6 +28,7 @@ dependencies {
 
     // DB section
     implementation("org.xerial:sqlite-jdbc:3.51.3.0")  //SQLite JDBC driver
+    implementation("com.zaxxer:HikariCP:7.0.2")        // Pool
 
     // LOMBOK
     compileOnly("org.projectlombok:lombok:1.18.38")

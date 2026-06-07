@@ -1,6 +1,7 @@
 package currencyexchange.servlets;
 
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.ExchangeDTO;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
@@ -11,7 +12,6 @@ import currencyexchange.servise.ExchangeService;
 import currencyexchange.servise.ExchangeServiceImpl;
 import currencyexchange.util.ConverterDTOs;
 import currencyexchange.util.ExchangeRateUtils;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +24,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.Map;
 import java.util.Optional;
 
@@ -39,15 +38,14 @@ public final class ExchangeServlet extends HttpServlet {
     ObjectMapper mapper;
 
     @Override
-    public void init() throws ServletException {
-        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
-        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        exchangeService = new ExchangeServiceImpl(connection);
+    public void init() {
+        HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
+        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+        exchangeService = new ExchangeServiceImpl(dataSource);
         exchangeRateUtils = new ExchangeRateUtils();
-        converterDTOs = new ConverterDTOs(connection);
+        converterDTOs = new ConverterDTOs(dataSource);
 
-        // Create and enable features
         mapper = JsonMapper.builder()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -118,7 +116,6 @@ public final class ExchangeServlet extends HttpServlet {
             return;
         }
 
-        //String baseCurrencyCode = request.getParameter("from").toUpperCase();
         String baseCurrencyCode = request.getParameter("from");
         if (null == baseCurrencyCode || baseCurrencyCode.isEmpty()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
@@ -156,7 +153,8 @@ public final class ExchangeServlet extends HttpServlet {
         }
 
         BigDecimal amount = exchangeRateUtils.getRate(amountParameter);
-        if (amount.compareTo(new BigDecimal("0")) == -1) {
+        int valueLess = -1;
+        if (amount.compareTo(new BigDecimal("0")) == valueLess) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -172,13 +170,6 @@ public final class ExchangeServlet extends HttpServlet {
                 .findByCode(targetCurrencyCode.toUpperCase());
 
         if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
-            String baseCode = (desiredBaseCurrency.isPresent()) ? "" : baseCurrencyCode;
-            String souz = (desiredBaseCurrency.isEmpty() && desiredTargetCurrency.isEmpty()) ? " и " : "";
-            String targetCode = (desiredTargetCurrency.isPresent()) ? "" : targetCurrencyCode;
-
-            String errorMsg = "Валюта " + baseCode + souz + targetCode
-                    + " из валютной пары не существует в БД ";
-
             request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",

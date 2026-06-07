@@ -1,5 +1,6 @@
 package currencyexchange.servlets;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDto;
 import currencyexchange.dto.ExchangeRateDTO;
 import currencyexchange.model.Currency;
@@ -9,7 +10,6 @@ import currencyexchange.repository.CurrenciesRepositoryImpl;
 import currencyexchange.repository.ExchangeRatesRepository;
 import currencyexchange.repository.ExchangeRatesRepositoryImpl;
 import currencyexchange.util.ConverterDTOs;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,7 +23,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,11 +36,11 @@ public final class ExchangeRatesServlet extends HttpServlet {
     private ConverterDTOs converterDTOs;
 
     @Override
-    public void init() throws ServletException {
-        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
-        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        converterDTOs = new ConverterDTOs(connection);
+    public void init() {
+        HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
+        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+        converterDTOs = new ConverterDTOs(dataSource);
 
         // Create and enable features
         mapper = JsonMapper.builder()
@@ -53,7 +52,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
 
     @SneakyThrows
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         /* **************************************
         Получение списка всех обменных курсов
         GET /exchangeRates
@@ -153,7 +152,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
         String targetCurrencyCode = request.getParameter("targetCurrencyCode");
         String rate = request.getParameter("rate");
 
-        if (baseCurrencyCode == null || baseCurrencyCode.isEmpty() || baseCurrencyCode.isBlank()) {
+        if (baseCurrencyCode == null || baseCurrencyCode.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
 
             String jsonError = String.format(
@@ -166,7 +165,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
             return;
         }
 
-        if (targetCurrencyCode == null || targetCurrencyCode.isEmpty() || targetCurrencyCode.isBlank()) {
+        if (targetCurrencyCode == null || targetCurrencyCode.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
 
             String jsonError = String.format(
@@ -179,7 +178,7 @@ public final class ExchangeRatesServlet extends HttpServlet {
             return;
         }
 
-        if (rate == null || rate.isEmpty() || rate.isBlank()) {
+        if (rate == null || rate.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
 
             String jsonError = String.format(

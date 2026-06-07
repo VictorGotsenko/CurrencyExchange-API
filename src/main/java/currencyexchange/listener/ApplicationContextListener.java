@@ -1,9 +1,7 @@
 package currencyexchange.listener;
 
-import currencyexchange.repository.CurrenciesRepository;
-import currencyexchange.repository.CurrenciesRepositoryImpl;
-import currencyexchange.repository.ExchangeRatesRepository;
-import currencyexchange.repository.ExchangeRatesRepositoryImpl;
+import currencyexchange.exeption.DatabaseException;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -16,82 +14,93 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.stream.Collectors;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 @Slf4j
 @WebListener
 public final class ApplicationContextListener implements ServletContextListener {
 
-    private Connection connection;
-    CurrenciesRepository currenciesRepository;
-    ExchangeRatesRepository exchangeRatesRepository;
-
+    HikariDataSource dataSource;
     private static final String JDBC_URL = "jdbc:sqlite:currencies.sqlite?foreign_keys=true";
-
-    private static String readResourceFile(String fileName) throws IOException {
-        InputStream inputStream = ApplicationContextListener.class.getClassLoader().getResourceAsStream(fileName);
-        assert inputStream != null;
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-            return reader.lines().collect(Collectors.joining("\n"));
-        }
-    }
 
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
+        ServletContext servletContext = servletContextEvent.getServletContext();
 
-        final ServletContext servletContext = servletContextEvent.getServletContext();
+        dataSource = createHikariDataSource();
+        servletContext.setAttribute("dataSource", dataSource);
 
-        try {
-            Class.forName("org.sqlite.JDBC");
-            connection = DriverManager.getConnection(JDBC_URL);
+        initDB();
+        insertCurrenciesData();
+        insertExchangeRatesData();
+    }
 
-            Statement statement = connection.createStatement();
-            statement.execute("PRAGMA foreign_keys = ON;");
-            log.info("Внешние ключи включены.");
+    private HikariDataSource createHikariDataSource() {
+        HikariConfig config = new HikariConfig();
+        config.setDriverClassName("org.sqlite.JDBC");
+        config.setJdbcUrl(JDBC_URL);
 
-            servletContext.setAttribute("ConnectionToDB", connection);
+        config.setMaximumPoolSize(1);  //Only for SQLite: pool == 1
+        config.setMinimumIdle(1);
 
-            currenciesRepository = new CurrenciesRepositoryImpl(connection);
-            exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
+        config.setConnectionTimeout(30000); // 30 секунд ожидания соединения
+        config.setIdleTimeout(600000);       // 10 минут
+        config.setMaxLifetime(1800000);      // 30 минут
 
-            createTables();
-            insertCurrenciesData();
-            insertExchangeRatesData();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        log.info("Config HikariCP created");
+        return new HikariDataSource(config);
+    }
+
+    private static String readResourceFile(String fileName) {
+        InputStream inputStream = ApplicationContextListener.class.getClassLoader().getResourceAsStream(fileName);
+        assert inputStream != null;
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            return reader.lines().collect(Collectors.joining("\n"));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void createTables() throws SQLException, IOException {
-        try (Statement statement = connection.createStatement()) {
+    private void initDB() {
+        try (Connection connection = dataSource.getConnection()) {
+            Statement statement = connection.createStatement();
+            statement.execute("PRAGMA foreign_keys = ON;");
+            log.info("Внешние ключи включены.");
             String sql = readResourceFile("schema.sql");
             statement.executeUpdate(sql);
             log.info(sql);
+        } catch (SQLException e) {
+            throw new DatabaseException("Ошибка при инициализации БД и создании таблиц");
         }
     }
 
-    private void insertCurrenciesData() throws SQLException, IOException {
-        try (Statement statement = connection.createStatement()) {
+    private void insertCurrenciesData() {
+        try (Connection connection = dataSource.getConnection()) {
+            Statement statement = connection.createStatement();
             String sql = readResourceFile("dataCurrency.sql");
             statement.executeUpdate(sql);
             log.info(sql);
+            log.info("Таблица Currency заполнена");
+        } catch (SQLException e) {
+            throw new DatabaseException("Ошибка при заполнении таблицы Currency");
         }
-        log.info("Таблица Currency заполнена");
     }
 
-    private void insertExchangeRatesData() throws SQLException, IOException {
-        try (Statement statement = connection.createStatement()) {
+    private void insertExchangeRatesData() {
+        try (Connection connection = dataSource.getConnection()) {
+            Statement statement = connection.createStatement();
             String sql = readResourceFile("dataExchangeRates.sql");
             statement.executeUpdate(sql);
             log.info(sql);
+            log.info("Таблица ExchangeRates заполнена");
+        } catch (SQLException e) {
+            throw new DatabaseException("Ошибка при заполнении таблицы ExchangeRates");
         }
-        log.info("Таблица ExchangeRates заполнена");
     }
 }

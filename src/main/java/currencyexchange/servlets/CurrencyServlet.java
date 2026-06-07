@@ -1,11 +1,11 @@
 package currencyexchange.servlets;
 
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
 import currencyexchange.repository.CurrenciesRepositoryImpl;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,9 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Connection;
 import java.util.List;
 
 @WebServlet(name = "CurrencyServlet", urlPatterns = "/currency/*")
@@ -29,11 +27,10 @@ public final class CurrencyServlet extends HttpServlet {
     ObjectMapper mapper;
 
     @Override
-    public void init() throws ServletException {
-        // Retrieve initialization parameters defined in web.xml or annotations
-        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        // Create and enable features
+    public void init() {
+        HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+
         mapper = JsonMapper.builder()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -42,7 +39,7 @@ public final class CurrencyServlet extends HttpServlet {
 
     @SneakyThrows
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         /* **************************************
         GET /currency/EUR
         -----------------------------------------

@@ -1,5 +1,6 @@
 package currencyexchange.servlets;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDto;
 import currencyexchange.dto.ExchangeRateDTO;
 import currencyexchange.model.Currency;
@@ -10,7 +11,6 @@ import currencyexchange.repository.ExchangeRatesRepository;
 import currencyexchange.repository.ExchangeRatesRepositoryImpl;
 import currencyexchange.util.ConverterDTOs;
 import currencyexchange.util.ExchangeRateUtils;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,7 +23,6 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
-import java.sql.Connection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,11 +37,11 @@ public final class ExchangeRateServlet extends HttpServlet {
     ObjectMapper mapper;
 
     @Override
-    public void init() throws ServletException {
-        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
-        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        converterDTOs = new ConverterDTOs(connection);
+    public void init() {
+        HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
+        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+        converterDTOs = new ConverterDTOs(dataSource);
         exchangeRateUtils = new ExchangeRateUtils();
 
         mapper = JsonMapper.builder()
@@ -141,10 +140,13 @@ public final class ExchangeRateServlet extends HttpServlet {
             );
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
+            return;
         }
+        ExchangeRate exchangeRateResult = exchangeRate.get();
+
 
         ExchangeRateDTO exchangeRateDTO;
-        ExchangeRate exchangeRateResult = exchangeRate.get();
+
 
         int id = exchangeRateResult.getId();
         BigDecimal rate = exchangeRateResult.getRate();
@@ -227,7 +229,7 @@ public final class ExchangeRateServlet extends HttpServlet {
 
         String requestBody = request.getReader().lines()
                 .collect(Collectors.joining(System.lineSeparator()));
-        if (requestBody.isEmpty() || requestBody.isBlank()) {
+        if (requestBody.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -257,7 +259,7 @@ public final class ExchangeRateServlet extends HttpServlet {
         Optional<Currency> desiredTargetCurrency = currenciesRepository.findByCode(targetCurrencyCode);
         if (desiredBaseCurrency.isEmpty() || desiredTargetCurrency.isEmpty()) {
             request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
-            String jsonError = null;
+            String jsonError;
             if (desiredBaseCurrency.isEmpty()) {
                 jsonError = String.format(
                         "{\"error\": \"HTTP Error 404 Not Found\", \"message\": \"%s\"}",

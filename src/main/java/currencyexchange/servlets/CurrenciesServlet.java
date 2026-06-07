@@ -1,10 +1,10 @@
 package currencyexchange.servlets;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
 import currencyexchange.repository.CurrenciesRepositoryImpl;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,11 +17,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @WebServlet(name = "CurrenciesServlet", urlPatterns = "/currencies")
 public final class CurrenciesServlet extends HttpServlet {
@@ -31,10 +29,10 @@ public final class CurrenciesServlet extends HttpServlet {
     ObjectMapper mapper;
 
     @Override
-    public void init() throws ServletException {
-        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        // Create and enable features
+    public void init() {
+        HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+
         mapper = JsonMapper.builder()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -43,7 +41,7 @@ public final class CurrenciesServlet extends HttpServlet {
 
     @SneakyThrows
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
     /* ******************************************
      GET /currencies
     ---------------------------------------------
@@ -118,7 +116,7 @@ public final class CurrenciesServlet extends HttpServlet {
         String code = request.getParameter("code");
         String sign = request.getParameter("sign");
 
-        if (name == null || name.isEmpty() || name.isBlank()) {
+        if (name == null || name.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -130,7 +128,7 @@ public final class CurrenciesServlet extends HttpServlet {
             return;
         }
 
-        if (code == null || code.isEmpty() || code.isBlank()) {
+        if (code == null || code.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -142,7 +140,7 @@ public final class CurrenciesServlet extends HttpServlet {
             return;
         }
 
-        if (sign == null || sign.isEmpty() || sign.isBlank()) {
+        if (sign == null || sign.isBlank()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -154,7 +152,7 @@ public final class CurrenciesServlet extends HttpServlet {
             return;
         }
 
-        if (sign != null && (sign.length() > 2)) {
+        if (sign.length() > 2) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
@@ -170,7 +168,7 @@ public final class CurrenciesServlet extends HttpServlet {
 
         List<String> codes = currencies.stream()
                 .map(Currency::getCode)
-                .collect(Collectors.toList());
+                .toList();
         if (codes.contains(code)) {
             request.getSession().setAttribute("errorCode", "SC_CONFLICT");
             String jsonError = String.format(

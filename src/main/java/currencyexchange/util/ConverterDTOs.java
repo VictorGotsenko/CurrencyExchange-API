@@ -1,5 +1,6 @@
 package currencyexchange.util;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
@@ -8,7 +9,6 @@ import currencyexchange.repository.ExchangeRatesRepository;
 import currencyexchange.repository.ExchangeRatesRepositoryImpl;
 import lombok.SneakyThrows;
 
-import java.sql.Connection;
 import java.util.Optional;
 
 public final class ConverterDTOs {
@@ -16,9 +16,9 @@ public final class ConverterDTOs {
     CurrenciesRepository currenciesRepository;
     ExchangeRatesRepository exchangeRatesRepository;
 
-    public ConverterDTOs(Connection connection) {
-        this.exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
-        this.currenciesRepository = new CurrenciesRepositoryImpl(connection);
+    public ConverterDTOs(HikariDataSource dataSource) {
+        this.exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
+        this.currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
     }
 
     @SneakyThrows
@@ -31,11 +31,10 @@ public final class ConverterDTOs {
         }
 
         Currency result = newCurrency.get();
-        CurrencyDto currencyDTO = new CurrencyDto(
+        return new CurrencyDto(
                 result.getId(),
                 result.getName(),
                 result.getCode(),
                 result.getSign());
-        return currencyDTO;
     }
 }

@@ -1,5 +1,6 @@
 package currencyexchange.repository;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.exeption.DatabaseException;
 import currencyexchange.model.Currency;
 
@@ -13,21 +14,22 @@ import java.util.List;
 import java.util.Optional;
 
 public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
-    private final Connection connection;
+    private final HikariDataSource dataSource;
     private static final String GET_ALL = "SELECT id, code, fullname, sign FROM currencies";
     private static final String FIND_BY_ID = "SELECT id, code, fullname, sign FROM currencies WHERE id = ?";
     private static final String FIND_BY_CODE = "SELECT id, code, fullname, sign FROM currencies WHERE code = ?";
     private static final String INSERT_CURRENCY = "INSERT INTO currencies (code, fullname ,sign) VALUES (?, ?, ?)";
 
-    public CurrenciesRepositoryImpl(Connection connection) {
-        this.connection = connection;
+    public CurrenciesRepositoryImpl(HikariDataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     @Override
     public List<Currency> getCurrencies() {
         List<Currency> result = new ArrayList<>();
 
-        try (Statement statement = connection.createStatement()) {
+        try (Connection connection = dataSource.getConnection()) {
+            Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(GET_ALL);
 
             while (resultSet.next()) {
@@ -46,14 +48,14 @@ public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
         } catch (SQLException e) {
             throw new DatabaseException("Ошибка при получении списка валют", e);
         }
-
         return result;
     }
 
     @Override
     public void save(Currency currency) {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(INSERT_CURRENCY,
-                Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement =
+                    connection.prepareStatement(INSERT_CURRENCY, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, currency.getCode());
             preparedStatement.setString(2, currency.getName());
             preparedStatement.setString(3, currency.getSign());
@@ -72,7 +74,8 @@ public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
 
     @Override
     public Optional<Currency> findByCode(String code) {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_CODE)) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_CODE);
             preparedStatement.setString(1, code);
             ResultSet resultSet = preparedStatement.executeQuery();
 
@@ -88,13 +91,13 @@ public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
         } catch (SQLException e) {
             throw new DatabaseException("Ошибка при поиске валюты " + code, e);
         }
-
         return Optional.empty();
     }
 
     @Override
     public Optional<Currency> findById(int id) {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_ID)) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_ID);
             preparedStatement.setInt(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
 
@@ -110,7 +113,6 @@ public final class CurrenciesRepositoryImpl implements CurrenciesRepository {
         } catch (SQLException e) {
             throw new DatabaseException("Ошибка при поиске валюты Id=" + id, e);
         }
-
         return Optional.empty();
     }
 }
