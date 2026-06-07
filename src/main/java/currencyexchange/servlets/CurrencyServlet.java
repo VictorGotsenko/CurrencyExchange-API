@@ -29,7 +29,7 @@ public final class CurrencyServlet extends HttpServlet {
     ObjectMapper mapper;
 
     @Override
-    public void init() throws ServletException {
+    public void init() {
         HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
         currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
 
