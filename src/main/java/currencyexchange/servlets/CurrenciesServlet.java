@@ -1,5 +1,6 @@
 package currencyexchange.servlets;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
@@ -32,9 +33,9 @@ public final class CurrenciesServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        // Create and enable features
+        HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+
         mapper = JsonMapper.builder()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)

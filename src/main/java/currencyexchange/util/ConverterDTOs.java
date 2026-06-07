@@ -1,5 +1,6 @@
 package currencyexchange.util;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
@@ -16,9 +17,9 @@ public final class ConverterDTOs {
     CurrenciesRepository currenciesRepository;
     ExchangeRatesRepository exchangeRatesRepository;
 
-    public ConverterDTOs(Connection connection) {
-        this.exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
-        this.currenciesRepository = new CurrenciesRepositoryImpl(connection);
+    public ConverterDTOs(HikariDataSource dataSource) {
+        this.exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
+        this.currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
     }
 
     @SneakyThrows

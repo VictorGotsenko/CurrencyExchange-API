@@ -1,5 +1,6 @@
 package currencyexchange.servise;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.model.Currency;
 import currencyexchange.model.ExchangeRate;
 import currencyexchange.repository.CurrenciesRepository;
@@ -19,9 +20,9 @@ public final class ExchangeServiceImpl implements ExchangeService {
     CurrenciesRepository currenciesRepository;
     ExchangeRatesRepository exchangeRatesRepository;
 
-    public ExchangeServiceImpl(Connection connection) {
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
+    public ExchangeServiceImpl(HikariDataSource dataSource) {
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
     }
 
     @Override

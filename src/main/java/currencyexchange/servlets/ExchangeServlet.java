@@ -1,6 +1,7 @@
 package currencyexchange.servlets;
 
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.dto.ExchangeDTO;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
@@ -40,12 +41,12 @@ public final class ExchangeServlet extends HttpServlet {
 
     @Override
     public void init() throws ServletException {
-        Connection connection = (Connection) getServletContext().getAttribute("ConnectionToDB");
-        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(connection);
-        currenciesRepository = new CurrenciesRepositoryImpl(connection);
-        exchangeService = new ExchangeServiceImpl(connection);
+        HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
+        exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
+        currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
+        exchangeService = new ExchangeServiceImpl(dataSource);
         exchangeRateUtils = new ExchangeRateUtils();
-        converterDTOs = new ConverterDTOs(connection);
+        converterDTOs = new ConverterDTOs(dataSource);
 
         // Create and enable features
         mapper = JsonMapper.builder()

@@ -1,5 +1,6 @@
 package currencyexchange.repository;
 
+import com.zaxxer.hikari.HikariDataSource;
 import currencyexchange.exeption.DatabaseException;
 import currencyexchange.model.ExchangeRate;
 
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepository {
-    private final Connection connection;
+    private final HikariDataSource dataSource;
 
     private static final String GET_ALL = "SELECT id, basecurrencyid, targetcurrencyid, rate FROM exchangerates";
     private static final String FIND_BY_ID =
@@ -29,14 +30,15 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
 
     private static final String UPDATE_RATE = "UPDATE exchangerates SET rate = ? WHERE id = ?";
 
-    public ExchangeRatesRepositoryImpl(Connection connection) {
-        this.connection = connection;
+    public ExchangeRatesRepositoryImpl(HikariDataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     @Override
     public void save(ExchangeRate exchangeRate) {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(INSERT_PAIR,
-                Statement.RETURN_GENERATED_KEYS)) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement =
+                    connection.prepareStatement(INSERT_PAIR, Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setInt(1, exchangeRate.getBaseCurrencyId());
             preparedStatement.setInt(2, exchangeRate.getTargetCurrencyId());
             preparedStatement.setBigDecimal(3, exchangeRate.getRate());
@@ -58,15 +60,15 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
     public List<ExchangeRate> getExchangeRates() {
         List<ExchangeRate> result = new ArrayList<>();
 
-        try (Statement statement = connection.createStatement()) {
+        try (Connection connection = dataSource.getConnection()) {
+            Statement statement = connection.createStatement();
             ResultSet resultSet = statement.executeQuery(GET_ALL);
             while (resultSet.next()) {
                 try {
-                    int baseCurrency = resultSet.getInt("basecurrencyid");
-                    int targetCurrency = resultSet.getInt("targetcurrencyid");
-                    String rate = resultSet.getString("rate");
-
-                    ExchangeRate exchangeRate = new ExchangeRate(baseCurrency, targetCurrency, new BigDecimal(rate));
+                    ExchangeRate exchangeRate = new ExchangeRate(
+                            resultSet.getInt("basecurrencyid"),
+                            resultSet.getInt("targetcurrencyid"),
+                            new BigDecimal(resultSet.getString("rate")));
                     exchangeRate.setId(resultSet.getInt("id"));
                     result.add(exchangeRate);
                 } catch (SQLException e) {
@@ -81,7 +83,8 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
 
     @Override
     public Optional<ExchangeRate> findById(int id) {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_ID)) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_ID);
             preparedStatement.setInt(1, id);
             ResultSet resultSet = preparedStatement.executeQuery();
 
@@ -90,7 +93,6 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
                         resultSet.getInt("basecurrencyid"),
                         resultSet.getInt("targetcurrencyid"),
                         new BigDecimal(resultSet.getString("rate")));
-
                 result.setId(resultSet.getInt("id"));
                 return Optional.of(result);
             }
@@ -102,15 +104,17 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
 
     @Override
     public Optional<ExchangeRate> findByCurrencyIDs(int baseCurrencyId, int targetCurrencyId) {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_CURRENCY_IDS)) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(FIND_BY_CURRENCY_IDS);
             preparedStatement.setInt(1, baseCurrencyId);
             preparedStatement.setInt(2, targetCurrencyId);
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
-                ExchangeRate result = new ExchangeRate(baseCurrencyId, targetCurrencyId,
+                ExchangeRate result = new ExchangeRate(
+                        baseCurrencyId,
+                        targetCurrencyId,
                         new BigDecimal(resultSet.getString("rate")));
                 result.setId(resultSet.getInt("id"));
-
                 return Optional.of(result);
             }
         } catch (SQLException e) {
@@ -122,7 +126,8 @@ public final class ExchangeRatesRepositoryImpl implements ExchangeRatesRepositor
 
     @Override
     public void update(int exchangeRateId, BigDecimal rate) {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_RATE)) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_RATE);
             preparedStatement.setBigDecimal(1, rate);
             preparedStatement.setInt(2, exchangeRateId);
             preparedStatement.executeUpdate();
