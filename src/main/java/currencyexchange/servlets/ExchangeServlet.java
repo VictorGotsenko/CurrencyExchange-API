@@ -153,8 +153,8 @@ public final class ExchangeServlet extends HttpServlet {
         }
 
         BigDecimal amount = exchangeRateUtils.getRate(amountParameter);
-        int VALUE_LESS = -1;
-        if (amount.compareTo(new BigDecimal("0")) == VALUE_LESS) {
+        int valueLess = -1;
+        if (amount.compareTo(new BigDecimal("0")) == valueLess) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
                     "{\"error\": \"HTTP Error 400 Bad Request\", \"message\": \"%s\"}",
