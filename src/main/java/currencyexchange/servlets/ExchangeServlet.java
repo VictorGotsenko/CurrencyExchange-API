@@ -37,8 +37,6 @@ public final class ExchangeServlet extends HttpServlet {
     ConverterDTOs converterDTOs;
     ObjectMapper mapper;
 
-    private final int VALUE_LESS = -1;
-
     @Override
     public void init() {
         HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
@@ -155,6 +153,7 @@ public final class ExchangeServlet extends HttpServlet {
         }
 
         BigDecimal amount = exchangeRateUtils.getRate(amountParameter);
+        int VALUE_LESS = -1;
         if (amount.compareTo(new BigDecimal("0")) == VALUE_LESS) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
             String jsonError = String.format(
