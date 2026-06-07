@@ -10,7 +10,6 @@ import currencyexchange.repository.ExchangeRatesRepositoryImpl;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;

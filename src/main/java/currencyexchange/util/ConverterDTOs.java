@@ -9,7 +9,6 @@ import currencyexchange.repository.ExchangeRatesRepository;
 import currencyexchange.repository.ExchangeRatesRepositoryImpl;
 import lombok.SneakyThrows;
 
-import java.sql.Connection;
 import java.util.Optional;
 
 public final class ConverterDTOs {
