@@ -12,7 +12,6 @@ import currencyexchange.servise.ExchangeService;
 import currencyexchange.servise.ExchangeServiceImpl;
 import currencyexchange.util.ConverterDTOs;
 import currencyexchange.util.ExchangeRateUtils;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,7 +38,7 @@ public final class ExchangeServlet extends HttpServlet {
     ObjectMapper mapper;
 
     @Override
-    public void init() throws ServletException {
+    public void init() {
         HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
         exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
         currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
@@ -47,7 +46,6 @@ public final class ExchangeServlet extends HttpServlet {
         exchangeRateUtils = new ExchangeRateUtils();
         converterDTOs = new ConverterDTOs(dataSource);
 
-        // Create and enable features
         mapper = JsonMapper.builder()
                 .enable(SerializationFeature.INDENT_OUTPUT)
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -118,7 +116,6 @@ public final class ExchangeServlet extends HttpServlet {
             return;
         }
 
-        //String baseCurrencyCode = request.getParameter("from").toUpperCase();
         String baseCurrencyCode = request.getParameter("from");
         if (null == baseCurrencyCode || baseCurrencyCode.isEmpty()) {
             request.getSession().setAttribute("errorCode", "SC_BAD_REQUEST");
@@ -175,9 +172,6 @@ public final class ExchangeServlet extends HttpServlet {
             String baseCode = (desiredBaseCurrency.isPresent()) ? "" : baseCurrencyCode;
             String souz = (desiredBaseCurrency.isEmpty() && desiredTargetCurrency.isEmpty()) ? " и " : "";
             String targetCode = (desiredTargetCurrency.isPresent()) ? "" : targetCurrencyCode;
-
-            String errorMsg = "Валюта " + baseCode + souz + targetCode
-                    + " из валютной пары не существует в БД ";
 
             request.getSession().setAttribute("errorCode", "SC_NOT_FOUND");
             String jsonError = String.format(

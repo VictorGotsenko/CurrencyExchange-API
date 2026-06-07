@@ -11,7 +11,6 @@ import currencyexchange.repository.ExchangeRatesRepository;
 import currencyexchange.repository.ExchangeRatesRepositoryImpl;
 import currencyexchange.util.ConverterDTOs;
 import currencyexchange.util.ExchangeRateUtils;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,7 +37,7 @@ public final class ExchangeRateServlet extends HttpServlet {
     ObjectMapper mapper;
 
     @Override
-    public void init() throws ServletException {
+    public void init() {
         HikariDataSource dataSource = (HikariDataSource) getServletContext().getAttribute("dataSource");
         exchangeRatesRepository = new ExchangeRatesRepositoryImpl(dataSource);
         currenciesRepository = new CurrenciesRepositoryImpl(dataSource);
@@ -141,10 +140,13 @@ public final class ExchangeRateServlet extends HttpServlet {
             );
             request.getSession().setAttribute("jsonError", jsonError);
             response.sendError(HttpServletResponse.SC_NOT_FOUND, jsonError);
+            return;
         }
+        ExchangeRate exchangeRateResult = exchangeRate.get();
+
 
         ExchangeRateDTO exchangeRateDTO;
-        ExchangeRate exchangeRateResult = exchangeRate.get();
+
 
         int id = exchangeRateResult.getId();
         BigDecimal rate = exchangeRateResult.getRate();

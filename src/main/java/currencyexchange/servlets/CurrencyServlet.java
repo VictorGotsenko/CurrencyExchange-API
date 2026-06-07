@@ -6,7 +6,6 @@ import currencyexchange.dto.CurrencyDto;
 import currencyexchange.model.Currency;
 import currencyexchange.repository.CurrenciesRepository;
 import currencyexchange.repository.CurrenciesRepositoryImpl;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,7 +16,6 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
@@ -41,7 +39,7 @@ public final class CurrencyServlet extends HttpServlet {
 
     @SneakyThrows
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
         /* **************************************
         GET /currency/EUR
         -----------------------------------------

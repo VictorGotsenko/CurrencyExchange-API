@@ -31,11 +31,10 @@ public final class ConverterDTOs {
         }
 
         Currency result = newCurrency.get();
-        CurrencyDto currencyDTO = new CurrencyDto(
+        return new CurrencyDto(
                 result.getId(),
                 result.getName(),
                 result.getCode(),
                 result.getSign());
-        return currencyDTO;
     }
 }
